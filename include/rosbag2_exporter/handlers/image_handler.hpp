@@ -1,6 +1,14 @@
 /*
- * Author: Abdalrahman M. Amer, www.linkedin.com/in/abdalrahman-m-amer
- * Date: 13.10.2024
+ * This file is based on the original work by:
+ * 
+ * Original Author: Abdalrahman M. Amer, www.linkedin.com/in/abdalrahman-m-amer
+ * Original Date: 13.10.2024
+ * 
+ * Modified By: Hector Cruz, hcruzgo@ed.ac.uk
+ * Modification Date: 27.01.2025
+ * 
+ * Changes:
+ * - Remove unused process_compressed_message member function
  */
 
 #ifndef ROSBAG2_EXPORTER__HANDLERS__IMAGE_HANDLER_HPP_
@@ -79,60 +87,6 @@ public:
 
       // Save the image to file
       save_image(cv_ptr->image, topic, img.header.stamp);
-  }
-
-  // Handle compressed image messages
-  void process_compressed_message(const rclcpp::SerializedMessage & serialized_msg,
-                                  const std::string & topic,
-                                  size_t index)
-  {
-    // Deserialize the incoming compressed image message
-    sensor_msgs::msg::CompressedImage compressed_img;
-    rclcpp::Serialization<sensor_msgs::msg::CompressedImage> serializer;
-    serializer.deserialize_message(&serialized_msg, &compressed_img);
-
-    // Determine file extension based on the compressed image format
-    std::string extension;
-    if (compressed_img.format.find("jpeg") != std::string::npos || compressed_img.format.find("jpg") != std::string::npos) {
-      extension = ".jpg";
-    } else if (compressed_img.format.find("png") != std::string::npos) {
-      extension = ".png";
-    } else {
-      RCLCPP_WARN(logger_, "Unknown compressed image format: %s. Defaulting to '.jpg'", compressed_img.format.c_str());
-      extension = ".jpg";  // Default to JPEG if unknown
-    }
-
-    // Create a timestamped filename and save compressed image directly
-    std::stringstream ss_timestamp;
-    ss_timestamp << compressed_img.header.stamp.sec << "-"
-                 << std::setw(9) << std::setfill('0') << compressed_img.header.stamp.nanosec;
-    std::string timestamp = ss_timestamp.str();
-
-    std::string sanitized_topic = topic;
-    if (!sanitized_topic.empty() && sanitized_topic[0] == '/') {
-      sanitized_topic = sanitized_topic.substr(1);
-    }
-
-    // Create the full file path
-    std::string filepath = output_dir_ + "/" + sanitized_topic + "/" + timestamp + extension;
-
-    // Ensure the directory exists, create if necessary
-    std::filesystem::path dir_path = output_dir_ + "/" + sanitized_topic;
-    if (!std::filesystem::exists(dir_path)) {
-      RCLCPP_INFO(logger_, "Creating directory: %s", dir_path.c_str());
-      std::filesystem::create_directories(dir_path);
-    }
-
-    // Save the compressed image data directly to file
-    std::ofstream outfile(filepath, std::ios::binary);
-    if (!outfile.is_open()) {
-      RCLCPP_ERROR(logger_, "Failed to open file to write compressed image: %s", filepath.c_str());
-      return;
-    }
-    outfile.write(reinterpret_cast<const char*>(compressed_img.data.data()), compressed_img.data.size());
-    outfile.close();
-
-    RCLCPP_INFO(logger_, "Successfully wrote compressed image to %s", filepath.c_str());
   }
 
 private:
