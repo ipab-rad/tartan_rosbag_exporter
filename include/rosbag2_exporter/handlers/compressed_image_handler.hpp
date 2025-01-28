@@ -27,10 +27,10 @@ class CompressedImageHandler : public BaseHandler
 {
 public:
 
-  CompressedImageHandler(const std::string & output_dir,
+  CompressedImageHandler(const std::string & topic_dir,
                const std::string & encoding,
                rclcpp::Logger logger)
-  : BaseHandler(logger), output_dir_(output_dir)
+  : BaseHandler(logger), topic_dir_(topic_dir)
   {}
 
   // Handle compressed image messages
@@ -60,19 +60,13 @@ public:
                  << std::setw(9) << std::setfill('0') << compressed_img.header.stamp.nanosec;
     std::string timestamp = ss_timestamp.str();
 
-    std::string sanitized_topic = topic;
-    if (!sanitized_topic.empty() && sanitized_topic[0] == '/') {
-      sanitized_topic = sanitized_topic.substr(1);
-    }
-
     // Create the full file path
-    std::string filepath = output_dir_ + "/" + sanitized_topic + "/" + timestamp + extension;
+    std::string filepath = topic_dir_ + "/" + timestamp + extension;
 
     // Ensure the directory exists, create if necessary
-    std::filesystem::path dir_path = output_dir_ + "/" + sanitized_topic;
-    if (!std::filesystem::exists(dir_path)) {
-      RCLCPP_INFO(logger_, "Creating directory: %s", dir_path.c_str());
-      std::filesystem::create_directories(dir_path);
+    if (!std::filesystem::exists(topic_dir_)) {
+      RCLCPP_INFO(logger_, "Creating directory: %s", topic_dir_.c_str());
+      std::filesystem::create_directories(topic_dir_);
     }
 
     // Save the compressed image data directly to file
@@ -89,7 +83,7 @@ public:
 
 
 private:
-  std::string output_dir_;
+  std::string topic_dir_;
   // Defined to comply with class parent but not needed
   std::string encoding_; 
 

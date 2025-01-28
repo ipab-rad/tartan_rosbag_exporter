@@ -20,8 +20,8 @@ class GPSHandler : public BaseHandler
 {
 public:
   // Constructor to accept logger
-  GPSHandler(const std::string & output_dir, rclcpp::Logger logger)
-  : BaseHandler(logger), output_dir_(output_dir)
+  GPSHandler(const std::string & topic_dir, rclcpp::Logger logger)
+  : BaseHandler(logger), topic_dir_(topic_dir)
   {}
 
   void process_message(const rclcpp::SerializedMessage & serialized_msg,
@@ -39,20 +39,13 @@ public:
                 << std::setw(9) << std::setfill('0') << gps_data.header.stamp.nanosec;
     std::string timestamp = ss_timestamp.str();
 
-    // Sanitize the topic name by removing the leading '/'
-    std::string sanitized_topic = topic;
-    if (!sanitized_topic.empty() && sanitized_topic[0] == '/') {
-      sanitized_topic = sanitized_topic.substr(1);
-    }
-
     // Create the full file path with '.csv' as the extension
-    std::string filepath = output_dir_ + "/" + sanitized_topic + "/" + timestamp + ".csv";
+    std::string filepath = topic_dir_ + "/" + timestamp + ".csv";
 
     // Ensure the directory exists, create if necessary
-    std::filesystem::path dir_path = output_dir_ + "/" + sanitized_topic;
-    if (!std::filesystem::exists(dir_path)) {
-      RCLCPP_INFO(logger_, "Creating directory: %s", dir_path.c_str());
-      std::filesystem::create_directories(dir_path);
+    if (!std::filesystem::exists(topic_dir_)) {
+      RCLCPP_INFO(logger_, "Creating directory: %s", topic_dir_.c_str());
+      std::filesystem::create_directories(topic_dir_);
     }
 
     // Open file and write GPS data as CSV
@@ -78,7 +71,7 @@ public:
   }
 
 private:
-  std::string output_dir_;
+  std::string topic_dir_;
 };
 
 }  // namespace rosbag2_exporter

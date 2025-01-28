@@ -51,6 +51,7 @@ void BagExporter::load_configuration(const std::string & config_file)
       TopicConfig tc;
       tc.name = topic["name"].as<std::string>();
       std::string type = topic["type"].as<std::string>();
+      tc.topic_dir = topic["topic_dir"].as<std::string>();
 
       tc.sample_interval = topic["sample_interval"] ? topic["sample_interval"].as<int>() : 1;  // Default to 1 (write every message)
 
@@ -88,41 +89,37 @@ void BagExporter::load_configuration(const std::string & config_file)
 
 void BagExporter::setup_handlers()
 {
+  // Extract base name from rosbag file
+  std::string rosbag_base_name = std::filesystem::path(bag_path_).stem().string();
+  
   for (const auto & topic : topics_) {
-    // Ensure topic name starts with '/'
-    std::string sanitized_topic = topic.name;
-    if (sanitized_topic.empty() || sanitized_topic[0] != '/') {
-      sanitized_topic = "/" + sanitized_topic;
-    }
-
     // Create directory for each topic
-    std::string topic_dir = output_dir_ + "/" + sanitized_topic.substr(1); // Remove leading '/'
-    std::filesystem::create_directories(topic_dir);
+    std::string abs_topic_dir = output_dir_ + "/" + rosbag_base_name + "/" + topic.topic_dir;
 
     // Initialize handler based on message type
     if (topic.type == MessageType::PointCloud2) {
-      auto handler = std::make_shared<PointCloudHandler>(topic_dir, this->get_logger());
+      auto handler = std::make_shared<PointCloudHandler>(abs_topic_dir, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::Image) {
-      auto handler = std::make_shared<ImageHandler>(topic_dir, topic.encoding, this->get_logger());
+      auto handler = std::make_shared<ImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::CompressedImage) {
-      auto handler = std::make_shared<CompressedImageHandler>(topic_dir, topic.encoding, this->get_logger());
+      auto handler = std::make_shared<CompressedImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::DepthImage) {
-      auto handler = std::make_shared<DepthImageHandler>(topic_dir, topic.encoding, this->get_logger());
+      auto handler = std::make_shared<DepthImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::IRImage) {
-      auto handler = std::make_shared<IRImageHandler>(topic_dir, topic.encoding, this->get_logger());
+      auto handler = std::make_shared<IRImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::IMU) {
-      auto handler = std::make_shared<IMUHandler>(topic_dir, this->get_logger());
+      auto handler = std::make_shared<IMUHandler>(abs_topic_dir, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::GPS) {
-      auto handler = std::make_shared<GPSHandler>(topic_dir, this->get_logger());
+      auto handler = std::make_shared<GPSHandler>(abs_topic_dir, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::LaserScan) {
-      auto handler = std::make_shared<LaserScanHandler>(topic_dir, this->get_logger());
+      auto handler = std::make_shared<LaserScanHandler>(abs_topic_dir, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else {
       RCLCPP_WARN(this->get_logger(), "Unsupported message type for topic '%s'. Skipping.", topic.name.c_str());

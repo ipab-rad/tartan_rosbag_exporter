@@ -21,10 +21,10 @@ class DepthImageHandler : public BaseHandler
 {
 public:
   // Constructor to accept logger and encoding with default fallback
-  DepthImageHandler(const std::string & output_dir,
+  DepthImageHandler(const std::string & topic_dir,
                    const std::string & encoding,
                    rclcpp::Logger logger)
-  : BaseHandler(logger), output_dir_(output_dir)
+  : BaseHandler(logger), topic_dir_(topic_dir)
   {
     // Validate or set default encoding if not provided
     if (encoding.empty()) {
@@ -67,20 +67,13 @@ public:
                 << std::setw(9) << std::setfill('0') << img.header.stamp.nanosec;
     std::string timestamp = ss_timestamp.str();
 
-    // Sanitize the topic name by removing the leading '/'
-    std::string sanitized_topic = topic;
-    if (!sanitized_topic.empty() && sanitized_topic[0] == '/') {
-      sanitized_topic = sanitized_topic.substr(1);
-    }
-
     // Create the full file path with '.png' as the extension
-    std::string filepath = output_dir_ + "/" + sanitized_topic + "/" + timestamp + ".png";
+    std::string filepath = topic_dir_ + "/" + timestamp + ".png";
 
     // Ensure the directory exists, create if necessary
-    std::filesystem::path dir_path = output_dir_ + "/" + sanitized_topic;
-    if (!std::filesystem::exists(dir_path)) {
-      RCLCPP_INFO(logger_, "Creating directory: %s", dir_path.c_str());
-      std::filesystem::create_directories(dir_path);
+    if (!std::filesystem::exists(topic_dir_)) {
+      RCLCPP_INFO(logger_, "Creating directory: %s", topic_dir_.c_str());
+      std::filesystem::create_directories(topic_dir_);
     }
 
     // Normalize depth image for better visualization if needed
@@ -100,7 +93,7 @@ public:
   }
 
 private:
-  std::string output_dir_;
+  std::string topic_dir_;
   std::string encoding_;
 };
 
