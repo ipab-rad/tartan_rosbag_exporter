@@ -71,10 +71,12 @@ private:
   void load_configuration(const std::string & config_file);
   void setup_handlers();
   void export_bag();
+  void create_metadata_file();
 
   std::string bag_path_;
   std::string output_dir_;
   std::string storage_id_;
+  std::string rosbag_base_name_;
   std::vector<TopicConfig> topics_;
   std::map<std::string, Handler> handlers_;
 };

@@ -53,6 +53,7 @@ public:
       pcl::fromROSMsg(pc2, *cloud);
       save_pointcloud_to_file<pcl::PointXYZ>(cloud, topic, pc2, index);  // Explicitly specify template type
     }
+
   }
 
 private:
@@ -71,19 +72,20 @@ private:
                  << std::setw(9) << std::setfill('0') << pc2.header.stamp.nanosec;
     std::string timestamp = ss_timestamp.str();
 
-    // Log the processing
-    RCLCPP_INFO(logger_, "Processing PointCloud2 message at timestamp: %s #%zu", timestamp.c_str(), index);
-
     // Ensure the directory exists
     std::filesystem::create_directories(topic_dir_);
 
     // Construct filename
     std::string filename = topic_dir_ + "/" + timestamp + ".pcd";
 
+    data_meta_vec_.push_back(DataMeta{filename, pc2.header.stamp, index});
+
     // Save the point cloud
     if (pcl::io::savePCDFileBinary(filename, *cloud) == -1) {
       RCLCPP_ERROR(logger_, "Failed to write PCD file to %s", filename.c_str());
     }
+
+    RCLCPP_DEBUG(logger_, "Successfully wrote PointCloud2 message to : %s", filename.c_str());
   }
 };
 

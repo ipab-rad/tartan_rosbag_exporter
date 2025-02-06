@@ -86,7 +86,7 @@ public:
       }
 
       // Save the image to file
-      save_image(cv_ptr->image, topic, img.header.stamp);
+      save_image(cv_ptr->image, topic, img.header.stamp, index);
   }
 
 private:
@@ -94,7 +94,7 @@ private:
   std::string encoding_;
 
   // Helper function to save uncompressed images
-  void save_image(const cv::Mat& image, const std::string& topic, const builtin_interfaces::msg::Time& timestamp)
+  void save_image(const cv::Mat& image, const std::string& topic, const builtin_interfaces::msg::Time& timestamp, size_t& index)
   {
     // Create a timestamped filename
     std::stringstream ss_timestamp;
@@ -110,7 +110,6 @@ private:
 
     // Ensure the directory exists, create if necessary
     if (!std::filesystem::exists(topic_dir_)) {
-      RCLCPP_INFO(logger_, "Creating directory: %s", topic_dir_.c_str());
       std::filesystem::create_directories(topic_dir_);
     }
 
@@ -118,7 +117,8 @@ private:
     if (!cv::imwrite(filepath, image)) {
       RCLCPP_ERROR(logger_, "Failed to write image to %s", filepath.c_str());
     } else {
-      RCLCPP_INFO(logger_, "Successfully wrote image to %s", filepath.c_str());
+      data_meta_vec_.push_back(DataMeta{filepath, timestamp, index});
+      RCLCPP_DEBUG(logger_, "Successfully wrote image to %s", filepath.c_str());
     }
   }
 };

@@ -12,7 +12,8 @@ storage_id: "mcap"
 
 # List of topics to extract from the ROS2 bag
 topics:
-  # Configuration for the point cloud topic
+  # The timestamp of the first topic in this list will be used as the reference for sensor synchronisation
+  # Configuration for the point cloud topic. 
   - name: "/pointcloud_topic"   # Name of the topic to extract
     type: "PointCloud2"         # Data type of the topic
     sample_interval: 10         # Write one sample every 10 messages

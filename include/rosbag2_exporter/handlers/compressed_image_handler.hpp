@@ -65,7 +65,6 @@ public:
 
     // Ensure the directory exists, create if necessary
     if (!std::filesystem::exists(topic_dir_)) {
-      RCLCPP_INFO(logger_, "Creating directory: %s", topic_dir_.c_str());
       std::filesystem::create_directories(topic_dir_);
     }
 
@@ -78,7 +77,9 @@ public:
     outfile.write(reinterpret_cast<const char*>(compressed_img.data.data()), compressed_img.data.size());
     outfile.close();
 
-    RCLCPP_INFO(logger_, "Successfully wrote compressed image to %s", filepath.c_str());
+    data_meta_vec_.push_back(DataMeta{filepath, compressed_img.header.stamp, index});
+
+    RCLCPP_DEBUG(logger_, "Successfully wrote compressed image to %s", filepath.c_str());
   }
 
 
