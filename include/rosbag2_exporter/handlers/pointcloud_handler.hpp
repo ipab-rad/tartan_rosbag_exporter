@@ -28,48 +28,16 @@ public:
 
   void process_message(const rclcpp::SerializedMessage & serialized_msg,
                       const std::string & topic,
-                      size_t index) override
+                      size_t global_id) override
   {
-    sensor_msgs::msg::PointCloud2 pc2;
+    sensor_msgs::msg::PointCloud2 pc2_msg;
     rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serializer;
-    serializer.deserialize_message(&serialized_msg, &pc2);
+    serializer.deserialize_message(&serialized_msg, &pc2_msg);
 
-    // Check if the point cloud has an intensity field
-    bool has_intensity = false;
-    for (const auto& field : pc2.fields) {
-      if (field.name == "intensity") {
-        has_intensity = true;
-        break;
-      }
-    }
-
-    // Create the point cloud and convert based on whether intensity is present
-    if (has_intensity) {
-      pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
-      pcl::fromROSMsg(pc2, *cloud);
-      save_pointcloud_to_file<pcl::PointXYZI>(cloud, topic, pc2, index);  // Explicitly specify template type
-    } else {
-      pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-      pcl::fromROSMsg(pc2, *cloud);
-      save_pointcloud_to_file<pcl::PointXYZ>(cloud, topic, pc2, index);  // Explicitly specify template type
-    }
-
-  }
-
-private:
-  std::string topic_dir_;
-
-  // Templated function to save point cloud to file
-  template<typename PointT>
-  void save_pointcloud_to_file(typename pcl::PointCloud<PointT>::Ptr cloud,
-                               const std::string & topic,
-                               const sensor_msgs::msg::PointCloud2 & pc2,
-                               size_t index)
-  {
     // Construct timestamp string
     std::stringstream ss_timestamp;
-    ss_timestamp << pc2.header.stamp.sec << "-"
-                 << std::setw(9) << std::setfill('0') << pc2.header.stamp.nanosec;
+    ss_timestamp << pc2_msg.header.stamp.sec << "-" << std::setw(9) << std::setfill('0')
+                 << pc2_msg.header.stamp.nanosec;
     std::string timestamp = ss_timestamp.str();
 
     // Ensure the directory exists
@@ -78,14 +46,58 @@ private:
     // Construct filename
     std::string filename = topic_dir_ + "/" + timestamp + ".pcd";
 
-    data_meta_vec_.push_back(DataMeta{filename, pc2.header.stamp, index});
+    data_meta_vec_.push_back(DataMeta{filename, pc2_msg.header.stamp, global_id});
+    data_vec_.push_back(pc2_msg);
+  }
 
-    // Save the point cloud
-    if (pcl::io::savePCDFileBinary(filename, *cloud) == -1) {
-      RCLCPP_ERROR(logger_, "Failed to write PCD file to %s", filename.c_str());
+  bool save_msg_to_file(size_t index) override
+  {
+    // Check index bounds
+    if (index >= data_meta_vec_.size() || index >= data_vec_.size()) {
+      RCLCPP_ERROR(logger_,
+                   "[PointCloudHandler] Provided index is out of range");
+      return false;
     }
 
-    RCLCPP_DEBUG(logger_, "Successfully wrote PointCloud2 message to : %s", filename.c_str());
+    DataMeta & data_meta = data_meta_vec_[index];
+    sensor_msgs::msg::PointCloud2 & pc2_msg = data_vec_[index];
+
+    // Check if the point cloud has an intensity field
+    bool has_intensity = std::any_of(
+      pc2_msg.fields.begin(), pc2_msg.fields.end(),
+      [](const auto & field) { return field.name == "intensity"; }
+    );
+
+    // Create the appropriate point cloud, convert the ROS message, and save it
+    if (has_intensity) {
+      pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
+      pcl::fromROSMsg(pc2_msg, *cloud);
+      return save_pointcloud_to_file<pcl::PointXYZI>(cloud, data_meta.data_path);
+    } else {
+      pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+      pcl::fromROSMsg(pc2_msg, *cloud);
+      return save_pointcloud_to_file<pcl::PointXYZ>(cloud, data_meta.data_path);
+    }
+  }
+
+
+private:
+  std::string topic_dir_;
+
+  std::vector<sensor_msgs::msg::PointCloud2> data_vec_;
+
+  // Templated function to save a point cloud to file
+  template <typename PointT>
+  bool save_pointcloud_to_file(typename pcl::PointCloud<PointT>::Ptr cloud,
+                               const std::string & filename)
+  {
+    if (pcl::io::savePCDFileBinary(filename, *cloud) == -1) {
+      RCLCPP_ERROR(logger_, "Failed to write PCD file to %s", filename.c_str());
+      return false;
+    }
+
+    RCLCPP_DEBUG(logger_, "Successfully wrote PointCloud2 message to: %s", filename.c_str());
+    return true;
   }
 };
 

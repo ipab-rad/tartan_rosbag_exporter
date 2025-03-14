@@ -4,21 +4,24 @@
 ![ROS2 Bag Exporter](img/cover.png)
 ![License](https://img.shields.io/github/license/ros2/rosbag2)
 ![ROS2 Version](https://img.shields.io/badge/ROS2-Humble%20Hawksbill-brightgreen)
-![Issues](https://img.shields.io/github/issues/geekgineer/ros2_bag_exporter)
+![Issues](https://img.shields.io/github/issues/ipab-rad/ros2_bag_exporter)
 
 ## Overview
-ROS2 Bag Exporter is a versatile ROS 2 (Humble Hawksbill) c++ package designed to export ROS 2 bag files (rosbag2) into various formats, including images, point cloud data (PCD) files, IMU data, and GPS data. This tool facilitates the extraction and conversion of data from bag files for analysis, visualization, and processing outside the ROS ecosystem.
+
+This is a fork of the original C++ ROS2 Bag exporter, customised specifically to meet the requirements of the University of Edinburgh Autonomous Vehicle project. For a more general functionality please refer to the original [repository](https://github.com/Geekgineer/ros2_bag_exporter).
+
+ROS2 Bag Exporter is  C++ package designed to export ROS 2 (Humble) bag files (rosbag2) into various formats, including images, point cloud data (PCD) files, IMU data, and GPS data. This tool facilitates the extraction and conversion of data from bag files for analysis, visualisation, and processing outside the ROS ecosystem.
 
 ### Features
 #### Support for Multiple Message Types:
 - **PointCloud2**: Export point cloud data to PCD files.
 - **Image**: Convert image messages to PNG format.
 - **CompressedImage**: Convert image messages to JPG or PNG format.
-- **IR Image**: Convert IR image messages to PNG format.
-- **DepthImage**: Export depth images with appropriate encoding.
-- **LaserScan**: Export laser scan data.
 - **IMU**: Export IMU data for inertial measurement analysis.
 - **GPS**: Export GPS coordinates and data.
+
+#### Automatic Metadata generation
+- Automatically generate metadata by associating sensor message timestamps. The output YAML will specify which camera messages correspond to timestamps from the main LIDAR sensor. This is particularly useful for data labelling tasks where the LIDAR serves as the primary reference sensor
 
 #### Configurable Export Settings:
 - Define input bag files, output directories, and storage formats via a YAML configuration file.
@@ -55,7 +58,7 @@ sudo apt install -y ros-humble-rclcpp ros-humble-rosbag2-cpp ros-humble-rosbag2-
 Navigate to your ROS 2 workspace's `src` directory and clone the `ros2_bag_exporter` repository:
 ```bash
 cd ~/ros2_ws/src
-git clone https://github.com/yourusername/ros2_bag_exporter.git
+git clone https://github.com/ipab-rad/ros2_bag_exporter.git
 ```
 Replace the repository URL with the actual repository URL.
 
@@ -64,7 +67,7 @@ Return to the root of your workspace and build the package using `colcon`:
 ```bash
 cd ~/ros2_ws
 source opt/ros/humble/setup.bash
-colcon build --packages-select ros2_bag_exporter
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select ros2_bag_exporter
 ```
 
 #### 3. Source the Workspace
@@ -83,11 +86,6 @@ bag_path: "/absolute/path/to/your/bagfile"
 output_dir: "/absolute/path/to/output/directory"
 storage_id: "sqlite3"  # Common storage ID; ensure it matches your bag's storage format
 topics:
-  - name: "/camera/depth/image_raw"
-    type: "DepthImage"
-    encoding: "16UC1"
-    sample_interval: 10  # Write one sample every 10 messages
-    topic_dir: "depth_raw"  # Output data in <output_dir>/<bag_name>/depth_raw
   - name: "/camera/color/image_raw"
     type: "Image"
     encoding: "rgb8"
@@ -119,7 +117,7 @@ topics:
   - `"mcap"`: For MCAP storage format.
 - **topics**: A list of topics to export. Each topic requires:
   - **name**: The ROS 2 topic name.
-  - **type**: The message type (PointCloud2, Image, DepthImage, IMU, GPS, etc.).
+  - **type**: The message type (PointCloud2, Image, CompressedImage, IMU, GPS, etc.).
   - **sample_interval**: The interval at which messages will be written (e.g., 100 for every 100 messages).
   - **topic_dir**: The name of the directory where data will be saved. The directory is created in `<output_dir>/<bag_name>/`.
 
@@ -140,11 +138,6 @@ bag_path: "/home/user/rosbags/sample_bag"
 output_dir: "/home/user/rosbags/exported_data"
 storage_id: "sqlite3"
 topics:
-  - name: "/camera/depth/image_raw"
-    type: "DepthImage"
-    encoding: "16UC1"
-    sample_interval: 10
-    topic_dir: "depht_raw"
   - name: "/camera/color/image_raw"
     type: "Image"
     encoding: "rgb8"
@@ -215,8 +208,8 @@ Contributions are welcome! Please follow the standard process:
 This project is licensed under the Apache License 2.0.
 
 ## Contact
-Maintainer: Abdalrahman M. Amer 
+Maintainer: Hector Cruz
 
-Email: abdalrahman.m5959@gmail.com
+Email: hcruzgo@ed.ac.uk
 
-GitHub: Geekgineer
+GitHub: hect95

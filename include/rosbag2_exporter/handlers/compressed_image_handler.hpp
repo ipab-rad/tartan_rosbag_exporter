@@ -36,7 +36,7 @@ public:
   // Handle compressed image messages
   void process_message(const rclcpp::SerializedMessage & serialized_msg,
                                   const std::string & topic,
-                                  size_t index) override
+                                  size_t global_id) override
   {
     // Deserialize the incoming compressed image message
     sensor_msgs::msg::CompressedImage compressed_img;
@@ -63,31 +63,45 @@ public:
     // Create the full file path
     std::string filepath = topic_dir_ + "/" + timestamp + extension;
 
-    // Ensure the directory exists, create if necessary
-    if (!std::filesystem::exists(topic_dir_)) {
-      std::filesystem::create_directories(topic_dir_);
-    }
+    // Save these for later
+    data_meta_vec_.push_back(DataMeta{filepath, compressed_img.header.stamp, global_id});
+    data_vec_.push_back(compressed_img);
 
-    // Save the compressed image data directly to file
-    std::ofstream outfile(filepath, std::ios::binary);
-    if (!outfile.is_open()) {
-      RCLCPP_ERROR(logger_, "Failed to open file to write compressed image: %s", filepath.c_str());
-      return;
-    }
-    outfile.write(reinterpret_cast<const char*>(compressed_img.data.data()), compressed_img.data.size());
-    outfile.close();
-
-    data_meta_vec_.push_back(DataMeta{filepath, compressed_img.header.stamp, index});
-
-    RCLCPP_DEBUG(logger_, "Successfully wrote compressed image to %s", filepath.c_str());
   }
 
+  bool save_msg_to_file(size_t index) override
+  {
+    // Check index bounds
+    if (index >= data_meta_vec_.size() || index >= data_vec_.size()) {
+      RCLCPP_ERROR(logger_,
+                   "[CompressedImageHandler] Provided index is out of range");
+      return false;
+    }
+
+    DataMeta & data_meta = data_meta_vec_[index];
+    sensor_msgs::msg::CompressedImage & compressed_image = data_vec_[index];
+
+    // Save the compressed image data directly to file
+    std::ofstream outfile(data_meta.data_path, std::ios::binary);
+    if (!outfile.is_open()) {
+      RCLCPP_ERROR(logger_, "Failed to open file to write compressed image: %s", data_meta.data_path.c_str());
+      return false;
+    }
+    outfile.write(
+      reinterpret_cast<const char *>(compressed_image.data.data()), compressed_image.data.size());
+    outfile.close();
+
+    RCLCPP_DEBUG(logger_, "Successfully wrote compressed image to '%s' ", data_meta.data_path.c_str());
+    return true;
+  }
 
 private:
   std::string topic_dir_;
   // Defined to comply with class parent but not needed
   std::string encoding_; 
 
+  // Data vector
+  std::vector<sensor_msgs::msg::CompressedImage> data_vec_;
 };
 
 }  // namespace rosbag2_exporter

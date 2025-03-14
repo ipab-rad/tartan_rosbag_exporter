@@ -69,6 +69,8 @@ public:
     RCLCPP_DEBUG(logger_, "Successfully wrote IMU data to %s", filepath.c_str());
   }
 
+  bool save_msg_to_file(size_t index) override { return false; }
+
 private:
   std::string topic_dir_;
 };

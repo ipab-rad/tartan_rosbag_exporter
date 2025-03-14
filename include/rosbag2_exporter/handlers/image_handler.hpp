@@ -47,80 +47,88 @@ public:
   // Handle uncompressed image messages
   void process_message(const rclcpp::SerializedMessage & serialized_msg,
                      const std::string & topic,
-                     size_t index) override
+                     size_t global_id) override
   {
       // Deserialize the incoming uncompressed image message
-      sensor_msgs::msg::Image img;
+      sensor_msgs::msg::Image img_msg;
       rclcpp::Serialization<sensor_msgs::msg::Image> serializer;
-      serializer.deserialize_message(&serialized_msg, &img);
+      serializer.deserialize_message(&serialized_msg, &img_msg);
 
-      // Convert the sensor message to a cv::Mat image using cv_bridge
-      cv_bridge::CvImagePtr cv_ptr;
+      // Create a timestamped filename
+      std::stringstream ss_timestamp;
+      ss_timestamp << img_msg.header.stamp.sec << "-" << std::setw(9) << std::setfill('0')
+                   << img_msg.header.stamp.nanosec;
+      std::string timestamp_str = ss_timestamp.str();
+
+      // Determine file extension based on encoding
+      std::string extension = ".png";  // Default to PNG
+
+      // Create the full file path
+      std::string filepath = topic_dir_ + "/" + timestamp_str + extension;
+
+      // Save data for later
+      data_meta_vec_.push_back(DataMeta{filepath, img_msg.header.stamp, global_id});
+      data_vec_.push_back(img_msg);
+  }
+
+  bool save_msg_to_file(size_t index) override
+  {
+    // Check index bounds
+    if (index >= data_meta_vec_.size() || index >= data_vec_.size()) {
+      RCLCPP_ERROR(logger_, "[ImageHandler] Provided index is out of range");
+      return false;
+    }
+
+    DataMeta & data_meta = data_meta_vec_[index];
+    sensor_msgs::msg::Image & img_msg = data_vec_[index];
+
+    // Convert the sensor message to a cv::Mat image using cv_bridge
+    cv_bridge::CvImagePtr cv_ptr;
+    try {
+      cv_ptr = cv_bridge::toCvCopy(img_msg, encoding_);
+    } catch (const cv_bridge::Exception & e) {
+      RCLCPP_WARN(logger_, "CV Bridge exception: %s. Using default encoding 'rgb8'.", e.what());
+
+      // Attempt to fallback to the default 'rgb8' encoding
       try {
-          cv_ptr = cv_bridge::toCvCopy(img, encoding_);
-      } catch (const cv_bridge::Exception & e) {
-          RCLCPP_ERROR(logger_, "CV Bridge exception: %s. Using default encoding 'rgb8'.", e.what());
-
-          // Attempt to fallback to the default 'rgb8' encoding
-          try {
-              cv_ptr = cv_bridge::toCvCopy(img, "rgb8");
-              encoding_ = "rgb8";  // Update to fallback encoding
-          } catch (const cv_bridge::Exception & e2) {
-              RCLCPP_ERROR(logger_, "Fallback to 'rgb8' failed: %s", e2.what());
-              return;
-          }
+        cv_ptr = cv_bridge::toCvCopy(img_msg, "rgb8");
+        encoding_ = "rgb8";  // Update to fallback encoding
+      } catch (const cv_bridge::Exception & e2) {
+        RCLCPP_WARN(logger_, "Fallback to 'rgb8' failed: %s", e2.what());
+        return false;
       }
+    }
 
-      // Apply color conversion based on encoding
-      if (encoding_ == "rgb8") {
-          // Convert from RGB to BGR for saving with OpenCV (OpenCV uses BGR)
-          cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_RGB2BGR);
-      } else if (encoding_ == "bgr8") {
-          // No conversion needed, OpenCV already uses BGR format
-          RCLCPP_INFO(logger_, "Image is already in 'bgr8', no conversion applied.");
-      } else if (encoding_ == "mono8" || encoding_ == "mono16") {
-          // Grayscale images (mono8 or mono16), no color conversion needed
-          RCLCPP_INFO(logger_, "Image is grayscale (%s), no color conversion applied.", encoding_.c_str());
-      } else {
-          RCLCPP_WARN(logger_, "Unsupported image encoding '%s'. Skipping color conversion.", encoding_.c_str());
-      }
+    // Apply color conversion based on encoding
+    if (encoding_ == "rgb8") {
+      // Convert from RGB to BGR for saving with OpenCV (OpenCV uses BGR)
+      cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_RGB2BGR);
+    } else if (encoding_ == "bgr8") {
+      // No conversion needed, OpenCV already uses BGR format
+      RCLCPP_DEBUG(logger_, "Image is already in 'bgr8', no conversion applied.");
+    } else if (encoding_ == "mono8" || encoding_ == "mono16") {
+      // Grayscale images (mono8 or mono16), no color conversion needed
+      RCLCPP_DEBUG(
+        logger_, "Image is grayscale (%s), no color conversion applied.", encoding_.c_str());
+    } else {
+      RCLCPP_WARN(
+        logger_, "Unsupported image encoding '%s'. Skipping color conversion.", encoding_.c_str());
+    }
 
-      // Save the image to file
-      save_image(cv_ptr->image, topic, img.header.stamp, index);
+    // Write the image to disk
+    if (!cv::imwrite(data_meta.data_path, cv_ptr->image)) {
+      RCLCPP_WARN(logger_, "Failed to write image to %s", data_meta.data_path.c_str());
+      return false;
+    } else {
+      RCLCPP_DEBUG(logger_, "Successfully wrote image to %s", data_meta.data_path.c_str());
+      return true;
+    }
   }
 
 private:
   std::string topic_dir_;
   std::string encoding_;
-
-  // Helper function to save uncompressed images
-  void save_image(const cv::Mat& image, const std::string& topic, const builtin_interfaces::msg::Time& timestamp, size_t& index)
-  {
-    // Create a timestamped filename
-    std::stringstream ss_timestamp;
-    ss_timestamp << timestamp.sec << "-"
-                 << std::setw(9) << std::setfill('0') << timestamp.nanosec;
-    std::string timestamp_str = ss_timestamp.str();
-
-    // Determine file extension based on encoding
-    std::string extension = ".png";  // Default to PNG
-
-    // Create the full file path
-    std::string filepath = topic_dir_ + timestamp_str + extension;
-
-    // Ensure the directory exists, create if necessary
-    if (!std::filesystem::exists(topic_dir_)) {
-      std::filesystem::create_directories(topic_dir_);
-    }
-
-    // Write the image to disk
-    if (!cv::imwrite(filepath, image)) {
-      RCLCPP_ERROR(logger_, "Failed to write image to %s", filepath.c_str());
-    } else {
-      data_meta_vec_.push_back(DataMeta{filepath, timestamp, index});
-      RCLCPP_DEBUG(logger_, "Successfully wrote image to %s", filepath.c_str());
-    }
-  }
+  std::vector<sensor_msgs::msg::Image> data_vec_;
 };
 
 }  // namespace rosbag2_exporter
