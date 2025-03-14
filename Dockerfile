@@ -73,6 +73,7 @@ WORKDIR $ROS_WS
 
 COPY ./ros2_bag_exporter "$ROS_WS"/src/ros2_bag_exporter
 
+# hadolint ignore=SC1091
 RUN source /opt/ros/humble/setup.bash \
     && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release \
     && rm -rf ./build ./log

@@ -4,7 +4,7 @@
 # ---------------------------------------------------------------------------
 
 CYCLONE_VOL=""
-BASH_CMD=() 
+BASH_CMD=()
 
 # Default cyclone_dds.xml path
 CYCLONE_DIR=/home/$USER/cyclone_dds.xml
