@@ -75,14 +75,9 @@ install(DIRECTORY include/
   DESTINATION include/
 )
 
-# Install configuration files (ensure config directory and files exist)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config")
-  install(DIRECTORY config/
-    DESTINATION share/${PROJECT_NAME}/
-  )
-else()
-  message(WARNING "Config directory does not exist in ${CMAKE_CURRENT_SOURCE_DIR}")
-endif()
-
+# Install configuration files
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}/
+)
 
 ament_package()
