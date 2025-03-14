@@ -6,14 +6,20 @@
 #ifndef ROSBAG2_EXPORTER__HANDLERS__POINTCLOUD_HANDLER_HPP_
 #define ROSBAG2_EXPORTER__HANDLERS__POINTCLOUD_HANDLER_HPP_
 
+#include "rclcpp/logging.hpp"
 #include "rosbag2_exporter/handlers/base_handler.hpp"
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <pcl_conversions/pcl_conversions.h>
+
+#include "sensor_msgs/msg/point_cloud2.hpp"
+
 #include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
-#include <filesystem>
-#include <pcl/point_types.h>
+#include <string>
+#include <vector>
 
 namespace rosbag2_exporter
 {
@@ -24,11 +30,12 @@ public:
   // Constructor to accept logger
   PointCloudHandler(const std::string & topic_dir, rclcpp::Logger logger)
   : BaseHandler(logger), topic_dir_(topic_dir)
-  {}
+  {
+  }
 
-  void process_message(const rclcpp::SerializedMessage & serialized_msg,
-                      const std::string & topic,
-                      size_t global_id) override
+  void process_message(
+    const rclcpp::SerializedMessage & serialized_msg, const std::string & topic,
+    size_t global_id) override
   {
     sensor_msgs::msg::PointCloud2 pc2_msg;
     rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serializer;
@@ -54,8 +61,7 @@ public:
   {
     // Check index bounds
     if (index >= data_meta_vec_.size() || index >= data_vec_.size()) {
-      RCLCPP_ERROR(logger_,
-                   "[PointCloudHandler] Provided index is out of range");
+      RCLCPP_ERROR(logger_, "[PointCloudHandler] Provided index is out of range");
       return false;
     }
 
@@ -65,8 +71,7 @@ public:
     // Check if the point cloud has an intensity field
     bool has_intensity = std::any_of(
       pc2_msg.fields.begin(), pc2_msg.fields.end(),
-      [](const auto & field) { return field.name == "intensity"; }
-    );
+      [](const auto & field) { return field.name == "intensity"; });
 
     // Create the appropriate point cloud, convert the ROS message, and save it
     if (has_intensity) {
@@ -80,7 +85,6 @@ public:
     }
   }
 
-
 private:
   std::string topic_dir_;
 
@@ -88,8 +92,8 @@ private:
 
   // Templated function to save a point cloud to file
   template <typename PointT>
-  bool save_pointcloud_to_file(typename pcl::PointCloud<PointT>::Ptr cloud,
-                               const std::string & filename)
+  bool save_pointcloud_to_file(
+    typename pcl::PointCloud<PointT>::Ptr cloud, const std::string & filename)
   {
     if (pcl::io::savePCDFileBinary(filename, *cloud) == -1) {
       RCLCPP_ERROR(logger_, "Failed to write PCD file to %s", filename.c_str());

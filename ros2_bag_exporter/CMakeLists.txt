@@ -14,7 +14,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rosbag2_cpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(std_msgs REQUIRED) 
+find_package(std_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(PCL REQUIRED COMPONENTS io)
@@ -23,14 +23,9 @@ find_package(OpenCV REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 
-
 # Include directories
-include_directories(
-  include
-  ${PCL_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
-  ${ament_index_cpp_INCLUDE_DIRS} 
-)
+include_directories(include ${PCL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
+                    ${ament_index_cpp_INCLUDE_DIRS})
 
 add_definitions(${PCL_DEFINITIONS})
 
@@ -38,7 +33,8 @@ add_definitions(${PCL_DEFINITIONS})
 add_executable(bag_exporter src/bag_exporter.cpp)
 
 # Link libraries
-ament_target_dependencies(bag_exporter
+ament_target_dependencies(
+  bag_exporter
   ament_cmake
   ament_index_cpp
   rclcpp
@@ -49,35 +45,20 @@ ament_target_dependencies(bag_exporter
   pcl_ros
   cv_bridge
   OpenCV
-  yaml-cpp
-)
+  yaml-cpp)
 
-target_link_libraries(bag_exporter
-  ${PCL_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+target_link_libraries(
+  bag_exporter ${PCL_LIBRARIES} ${OpenCV_LIBRARIES}
   # ${YAML_CPP_LIBRARIES}
-  ${ament_index_cpp_INCLUDE_DIRS} 
-  yaml-cpp
-  ament_index_cpp::ament_index_cpp
-
-)
-
-
+  ${ament_index_cpp_INCLUDE_DIRS} yaml-cpp ament_index_cpp::ament_index_cpp)
 
 # Install executable
-install(TARGETS
-  bag_exporter
-  DESTINATION lib/${PROJECT_NAME}
-)
+install(TARGETS bag_exporter DESTINATION lib/${PROJECT_NAME})
 
 # Install header files
-install(DIRECTORY include/
-  DESTINATION include/
-)
+install(DIRECTORY include DESTINATION include)
 
 # Install configuration files
-install(DIRECTORY config
-  DESTINATION share/${PROJECT_NAME}/
-)
+install(DIRECTORY config DESTINATION share/${PROJECT_NAME}/)
 
 ament_package()
