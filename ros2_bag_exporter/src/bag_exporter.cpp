@@ -3,33 +3,35 @@
  * Date: 13.10.2024
  */
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include "rosbag2_exporter/bag_exporter.hpp"
+
 #include "rosbag2_exporter/utils.hpp"
+
+#include <ament_index_cpp/get_package_share_directory.hpp>
+
+#include <yaml-cpp/yaml.h>
+
 #include <chrono>
 #include <fstream>
-#include <yaml-cpp/yaml.h>
 
 namespace rosbag2_exporter
 {
 
-BagExporter::BagExporter(const rclcpp::NodeOptions & options)
-: Node("rosbag2_exporter", options)
+BagExporter::BagExporter(const rclcpp::NodeOptions & options) : Node("rosbag2_exporter", options)
 {
-
   // Find the package share directory
   std::string package_share_directory;
   try {
-      package_share_directory = ament_index_cpp::get_package_share_directory("ros2_bag_exporter");
+    package_share_directory = ament_index_cpp::get_package_share_directory("ros2_bag_exporter");
   } catch (const std::exception & e) {
-      RCLCPP_ERROR(this->get_logger(), "Package share directory not found: %s", e.what());
-      rclcpp::shutdown();
-      return;
+    RCLCPP_ERROR(this->get_logger(), "Package share directory not found: %s", e.what());
+    rclcpp::shutdown();
+    return;
   }
-    
+
   // Declare and get the config_file parameter (absolute path)
   std::string config_file = this->declare_parameter<std::string>(
-      "config_file", package_share_directory + "/config/exporter_config.yaml");
+    "config_file", package_share_directory + "/config/exporter_config.yaml");
 
   // Load configuration
   load_configuration(config_file);
@@ -61,7 +63,7 @@ void BagExporter::load_configuration(const std::string & config_file)
     bag_path_ = config["bag_path"].as<std::string>();
     output_dir_ = config["output_dir"].as<std::string>();
     storage_id_ = config["storage_id"].as<std::string>();
-    
+
     RCLCPP_INFO(this->get_logger(), "Reading from:\n \033[35m%s\033[0m", bag_path_.c_str());
 
     for (const auto & topic : config["topics"]) {
@@ -70,16 +72,19 @@ void BagExporter::load_configuration(const std::string & config_file)
       std::string type = topic["type"].as<std::string>();
       tc.topic_dir = topic["topic_dir"].as<std::string>();
 
-      tc.sample_interval = topic["sample_interval"] ? topic["sample_interval"].as<int>() : 1;  // Default to 1 (write every message)
+      tc.sample_interval = topic["sample_interval"] ? topic["sample_interval"].as<int>()
+                                                    : 1;  // Default to 1 (write every message)
 
       if (type == "PointCloud2") {
         tc.type = MessageType::PointCloud2;
       } else if (type == "Image") {
         tc.type = MessageType::Image;
-        tc.encoding = topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8"; // default encoding
+        tc.encoding =
+          topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8";  // default encoding
       } else if (type == "CompressedImage") {
         tc.type = MessageType::CompressedImage;
-        tc.encoding = topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8"; // default encoding
+        tc.encoding =
+          topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8";  // default encoding
       } else if (type == "IMU") {
         tc.type = MessageType::IMU;
       } else if (type == "GPS") {
@@ -103,7 +108,7 @@ void BagExporter::setup_handlers()
 {
   // Extract base name from rosbag file
   rosbag_base_name_ = std::filesystem::path(bag_path_).stem().string();
-  
+
   for (const auto & topic : topics_) {
     // Create directory for each topic
     std::string abs_topic_dir = output_dir_ + "/" + rosbag_base_name_ + "/" + topic.topic_dir;
@@ -118,10 +123,12 @@ void BagExporter::setup_handlers()
       auto handler = std::make_shared<PointCloudHandler>(abs_topic_dir, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::Image) {
-      auto handler = std::make_shared<ImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
+      auto handler =
+        std::make_shared<ImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::CompressedImage) {
-      auto handler = std::make_shared<CompressedImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
+      auto handler =
+        std::make_shared<CompressedImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::IMU) {
       auto handler = std::make_shared<IMUHandler>(abs_topic_dir, this->get_logger());
@@ -130,7 +137,9 @@ void BagExporter::setup_handlers()
       auto handler = std::make_shared<GPSHandler>(abs_topic_dir, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else {
-      RCLCPP_WARN(this->get_logger(), "Unsupported message type for topic '%s'. Skipping.", topic.name.c_str());
+      RCLCPP_WARN(
+        this->get_logger(), "Unsupported message type for topic '%s'. Skipping.",
+        topic.name.c_str());
     }
   }
 }
@@ -159,13 +168,15 @@ void BagExporter::export_bag()
   // Initialize handlers based on available topics
   size_t total_bag_messages = 0;
   for (auto & [topic_name, handler] : handlers_) {
-    auto it = std::find_if(metadata.begin(), metadata.end(),
+    auto it = std::find_if(
+      metadata.begin(), metadata.end(),
       [&topic_name](const rosbag2_storage::TopicInformation & ti) {
         return ti.topic_metadata.name == topic_name;
       });
     if (it == metadata.end()) {
-      RCLCPP_WARN(this->get_logger(), "Topic '%s' not found in the bag \U0000274C", topic_name.c_str());
-      handler.handler.reset(); // Remove handler if topic not found
+      RCLCPP_WARN(
+        this->get_logger(), "Topic '%s' not found in the bag \U0000274C", topic_name.c_str());
+      handler.handler.reset();  // Remove handler if topic not found
     } else {
       RCLCPP_INFO(this->get_logger(), "'%s' topic found \U00002705", topic_name.c_str());
       total_bag_messages += it->message_count;
@@ -186,10 +197,9 @@ void BagExporter::export_bag()
       size_t current_index = handler_it->second.current_index;
 
       // Find the sample interval for the topic
-      auto topic_it = std::find_if(topics_.begin(), topics_.end(),
-        [&topic](const TopicConfig & config) {
-          return config.name == topic;
-        });
+      auto topic_it = std::find_if(
+        topics_.begin(), topics_.end(),
+        [&topic](const TopicConfig & config) { return config.name == topic; });
 
       if (topic_it != topics_.end()) {
         size_t sample_interval = topic_it->sample_interval;  // Get the sample interval
@@ -200,9 +210,9 @@ void BagExporter::export_bag()
           rclcpp::SerializedMessage ser_msg;
           size_t buffer_length = serialized_msg->serialized_data->buffer_length;
           ser_msg.reserve(buffer_length);
-          std::memcpy(ser_msg.get_rcl_serialized_message().buffer, 
-                      serialized_msg->serialized_data->buffer, 
-                      buffer_length);
+          std::memcpy(
+            ser_msg.get_rcl_serialized_message().buffer, serialized_msg->serialized_data->buffer,
+            buffer_length);
           ser_msg.get_rcl_serialized_message().buffer_length = buffer_length;
 
           // Process the message
@@ -217,20 +227,18 @@ void BagExporter::export_bag()
 
       // Log progress
       print_progress(static_cast<int>(std::round((global_id * 100.0) / total_bag_messages)));
-            
     }
   }
-
 }
 
 void BagExporter::create_metadata_file()
 {
-
-  // YAML C++ preserves list order, so topics_[0] corresponds to  
+  // YAML C++ preserves list order, so topics_[0] corresponds to
   // the first sensor defined in the YAML file, used as the time sync reference.
   auto & main_sensor_handler = handlers_[topics_[0].name].handler;
-  RCLCPP_INFO(this->get_logger(), "Using '%s' timestamp for cameras' time synchronisation",
-              topics_[0].name.c_str());
+  RCLCPP_INFO(
+    this->get_logger(), "Using '%s' timestamp for cameras' time synchronisation",
+    topics_[0].name.c_str());
 
   std::vector<size_t> msg_index(topics_.size(), 0);
 
@@ -255,7 +263,7 @@ void BagExporter::create_metadata_file()
     sync_group["lidar"]["global_id"] = main_data_meta.global_id;
 
     // Save this pointcloud
-    if (! main_sensor_handler->save_msg_to_file(idx)){
+    if (!main_sensor_handler->save_msg_to_file(idx)) {
       RCLCPP_WARN(
         this->get_logger(), "Unable to save pointcloud msg as file, global_id: %li",
         main_data_meta.global_id);
@@ -263,53 +271,50 @@ void BagExporter::create_metadata_file()
 
     // Save file name relative to rosbag_base_name_
     std::string abs_path_prefix = output_dir_ + "/" + rosbag_base_name_ + "/";
-    if (main_data_meta.data_path.find(abs_path_prefix) == 0)
-    {
-        main_data_meta.data_path.erase(0, abs_path_prefix.length());
+    if (main_data_meta.data_path.find(abs_path_prefix) == 0) {
+      main_data_meta.data_path.erase(0, abs_path_prefix.length());
     }
     sync_group["lidar"]["file"] = main_data_meta.data_path;
 
-    auto& curr_lidar_time = main_data_meta.timestamp;
+    auto & curr_lidar_time = main_data_meta.timestamp;
 
     // Where the cameras' YAML data will be saved
     YAML::Node cameras;
 
     // Find closest timestamp for each camera
-    for (int k = 0; k < topics_.size(); k++)
-    {
-        // Only process camera messages
-        if (topics_[k].type != MessageType::Image &&
-            topics_[k].type != MessageType::CompressedImage)
-        {
-            continue;
-        }
+    for (int k = 0; k < topics_.size(); k++) {
+      // Only process camera messages
+      if (
+        topics_[k].type != MessageType::Image && topics_[k].type != MessageType::CompressedImage) {
+        continue;
+      }
 
-        // Get current camera metadata
-        auto &curr_cam_handler = handlers_[topics_[k].name].handler;
-        auto &current_meta_data_vec = curr_cam_handler->data_meta_vec_;
-        size_t closest_time_index = find_closest_timestamp(current_meta_data_vec,
-                                                            curr_lidar_time, msg_index[k]);
-        
-        // Create YAML metadata based on the found time index
-        auto current_cam_meta = current_meta_data_vec[closest_time_index];
-        YAML::Node cam;
-        cam["global_id"] = current_cam_meta.global_id;
-        cam["name"] = get_cam_name(topics_[k].name);
-        
-        // Save this image
-        if (!curr_cam_handler->save_msg_to_file(closest_time_index)) {
-          RCLCPP_WARN(
-            this->get_logger(), "Unable to save image msg as file, global_id: %li",
-            main_data_meta.global_id);
-        }
+      // Get current camera metadata
+      auto & curr_cam_handler = handlers_[topics_[k].name].handler;
+      auto & current_meta_data_vec = curr_cam_handler->data_meta_vec_;
+      size_t closest_time_index =
+        find_closest_timestamp(current_meta_data_vec, curr_lidar_time, msg_index[k]);
 
-        // Save file name relative to rosbag_base_name_
-        if (current_cam_meta.data_path.find(abs_path_prefix) == 0) { 
-          current_cam_meta.data_path.erase(0, abs_path_prefix.length());  
-        }
-        cam["file"] = current_cam_meta.data_path;
+      // Create YAML metadata based on the found time index
+      auto current_cam_meta = current_meta_data_vec[closest_time_index];
+      YAML::Node cam;
+      cam["global_id"] = current_cam_meta.global_id;
+      cam["name"] = get_cam_name(topics_[k].name);
 
-        cameras.push_back(cam);
+      // Save this image
+      if (!curr_cam_handler->save_msg_to_file(closest_time_index)) {
+        RCLCPP_WARN(
+          this->get_logger(), "Unable to save image msg as file, global_id: %li",
+          main_data_meta.global_id);
+      }
+
+      // Save file name relative to rosbag_base_name_
+      if (current_cam_meta.data_path.find(abs_path_prefix) == 0) {
+        current_cam_meta.data_path.erase(0, abs_path_prefix.length());
+      }
+      cam["file"] = current_cam_meta.data_path;
+
+      cameras.push_back(cam);
     }
 
     // Complete YAML sync group
@@ -328,7 +333,9 @@ void BagExporter::create_metadata_file()
   yaml_file << root;
   yaml_file.close();
 
-  RCLCPP_INFO(this->get_logger(), "\U0001F680 Metadata file created in: \033[36m%s\033[0m", yaml_path.c_str());
+  RCLCPP_INFO(
+    this->get_logger(), "\U0001F680 Metadata file created in: \033[36m%s\033[0m",
+    yaml_path.c_str());
 }
 
 }  // namespace rosbag2_exporter

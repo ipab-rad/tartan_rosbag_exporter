@@ -26,7 +26,7 @@ ros2_bag_exporter is  C++ package designed to export ROS 2 (Humble) bag files in
 #### Automatic Directory Management:
 - Automatically creates necessary directories for each topic based on the configuration.
 
-## Install 
+## Install
 ### Dependencies
 Ensure that the following dependencies are installed on your system:
 - ROS 2 Humble Hawksbill

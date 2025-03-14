@@ -1,12 +1,12 @@
 /*
  * This file is based on the original work by:
- * 
+ *
  * Original Author: Abdalrahman M. Amer, www.linkedin.com/in/abdalrahman-m-amer
  * Original Date: 13.10.2024
- * 
+ *
  * Modified By: Hector Cruz, hcruzgo@ed.ac.uk
  * Modification Date: 27.01.2025
- * 
+ *
  * Changes:
  * - Remove unused process_compressed_message member function
  */
@@ -14,14 +14,21 @@
 #ifndef ROSBAG2_EXPORTER__HANDLERS__IMAGE_HANDLER_HPP_
 #define ROSBAG2_EXPORTER__HANDLERS__IMAGE_HANDLER_HPP_
 
+#include "rclcpp/logging.hpp"
 #include "rosbag2_exporter/handlers/base_handler.hpp"
-#include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/compressed_image.hpp>
-#include <cv_bridge/cv_bridge.h>
+
 #include <opencv2/opencv.hpp>
+
+#include "sensor_msgs/msg/compressed_image.hpp"
+#include "sensor_msgs/msg/image.hpp"
+
+#include <cv_bridge/cv_bridge.h>
+
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
-#include <filesystem>
+#include <string>
+#include <vector>
 
 namespace rosbag2_exporter
 {
@@ -30,9 +37,7 @@ class ImageHandler : public BaseHandler
 {
 public:
   // Constructor to accept logger and encoding, with a default value for encoding
-  ImageHandler(const std::string & topic_dir,
-               const std::string & encoding,
-               rclcpp::Logger logger)
+  ImageHandler(const std::string & topic_dir, const std::string & encoding, rclcpp::Logger logger)
   : BaseHandler(logger), topic_dir_(topic_dir)
   {
     // Validate or set default encoding if not provided
@@ -45,30 +50,30 @@ public:
   }
 
   // Handle uncompressed image messages
-  void process_message(const rclcpp::SerializedMessage & serialized_msg,
-                     const std::string & topic,
-                     size_t global_id) override
+  void process_message(
+    const rclcpp::SerializedMessage & serialized_msg, const std::string & topic,
+    size_t global_id) override
   {
-      // Deserialize the incoming uncompressed image message
-      sensor_msgs::msg::Image img_msg;
-      rclcpp::Serialization<sensor_msgs::msg::Image> serializer;
-      serializer.deserialize_message(&serialized_msg, &img_msg);
+    // Deserialize the incoming uncompressed image message
+    sensor_msgs::msg::Image img_msg;
+    rclcpp::Serialization<sensor_msgs::msg::Image> serializer;
+    serializer.deserialize_message(&serialized_msg, &img_msg);
 
-      // Create a timestamped filename
-      std::stringstream ss_timestamp;
-      ss_timestamp << img_msg.header.stamp.sec << "-" << std::setw(9) << std::setfill('0')
-                   << img_msg.header.stamp.nanosec;
-      std::string timestamp_str = ss_timestamp.str();
+    // Create a timestamped filename
+    std::stringstream ss_timestamp;
+    ss_timestamp << img_msg.header.stamp.sec << "-" << std::setw(9) << std::setfill('0')
+                 << img_msg.header.stamp.nanosec;
+    std::string timestamp_str = ss_timestamp.str();
 
-      // Determine file extension based on encoding
-      std::string extension = ".png";  // Default to PNG
+    // Determine file extension based on encoding
+    std::string extension = ".png";  // Default to PNG
 
-      // Create the full file path
-      std::string filepath = topic_dir_ + "/" + timestamp_str + extension;
+    // Create the full file path
+    std::string filepath = topic_dir_ + "/" + timestamp_str + extension;
 
-      // Save data for later
-      data_meta_vec_.push_back(DataMeta{filepath, img_msg.header.stamp, global_id});
-      data_vec_.push_back(img_msg);
+    // Save data for later
+    data_meta_vec_.push_back(DataMeta{filepath, img_msg.header.stamp, global_id});
+    data_vec_.push_back(img_msg);
   }
 
   bool save_msg_to_file(size_t index) override

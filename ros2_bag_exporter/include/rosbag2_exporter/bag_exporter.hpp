@@ -6,40 +6,32 @@
 #ifndef ROSBAG2_EXPORTER__BAG_EXPORTER_HPP_
 #define ROSBAG2_EXPORTER__BAG_EXPORTER_HPP_
 
+#include "rclcpp/rclcpp.hpp"
+#include "rosbag2_cpp/converter_options.hpp"
+#include "rosbag2_cpp/readers/sequential_reader.hpp"
 #include "rosbag2_exporter/handlers/base_handler.hpp"
-#include "rosbag2_exporter/handlers/pointcloud_handler.hpp"
-#include "rosbag2_exporter/handlers/image_handler.hpp"
 #include "rosbag2_exporter/handlers/compressed_image_handler.hpp"
-#include "rosbag2_exporter/handlers/imu_handler.hpp"
 #include "rosbag2_exporter/handlers/gps_handler.hpp"
+#include "rosbag2_exporter/handlers/image_handler.hpp"
+#include "rosbag2_exporter/handlers/imu_handler.hpp"
+#include "rosbag2_exporter/handlers/pointcloud_handler.hpp"
+#include "rosbag2_storage/storage_options.hpp"
 
 #include <yaml-cpp/yaml.h>
+
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <algorithm>
-#include <memory>
-#include <vector>
-#include <string>
 #include <map>
-
-#include <rclcpp/rclcpp.hpp>
-#include <rosbag2_cpp/readers/sequential_reader.hpp>
-#include <rosbag2_storage/storage_options.hpp>
-#include <rosbag2_cpp/converter_options.hpp>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace rosbag2_exporter
 {
 
-enum class MessageType
-{
-  PointCloud2,
-  Image,
-  CompressedImage,
-  IMU,
-  GPS,
-  Unknown
-};
+enum class MessageType { PointCloud2, Image, CompressedImage, IMU, GPS, Unknown };
 
 struct TopicConfig
 {
@@ -59,7 +51,7 @@ struct Handler
 class BagExporter : public rclcpp::Node
 {
 public:
-  BagExporter(const rclcpp::NodeOptions & options);
+  explicit BagExporter(const rclcpp::NodeOptions & options);
 
 private:
   void load_configuration(const std::string & config_file);
