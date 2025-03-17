@@ -17,7 +17,8 @@
 namespace rosbag2_exporter
 {
 
-BagExporter::BagExporter(const rclcpp::NodeOptions & options) : Node("rosbag2_exporter", options)
+BagExporter::BagExporter(const rclcpp::NodeOptions & options)
+: Node("rosbag2_exporter", options), tf_extracted_(false)
 {
   // Find the package share directory
   std::string package_share_directory;
@@ -89,6 +90,8 @@ void BagExporter::load_configuration(const std::string & config_file)
         tc.type = MessageType::IMU;
       } else if (type == "GPS") {
         tc.type = MessageType::GPS;
+      } else if (type == "TF") {
+        tc.type = MessageType::TF;
       } else {
         tc.type = MessageType::Unknown;
       }
@@ -135,6 +138,9 @@ void BagExporter::setup_handlers()
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::GPS) {
       auto handler = std::make_shared<GPSHandler>(abs_topic_dir, this->get_logger());
+      handlers_[topic.name] = Handler{handler, 0};
+    } else if (topic.type == MessageType::TF) {
+      auto handler = std::make_shared<TFHandler>(abs_topic_dir, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else {
       RCLCPP_WARN(
@@ -194,6 +200,18 @@ void BagExporter::export_bag()
 
     auto handler_it = handlers_.find(topic);
     if (handler_it != handlers_.end() && handler_it->second.handler) {
+      // Only process /tf_static once
+      if (topic == "/tf_static") {
+        if (!tf_extracted_) {
+          // Construct rclcpp::SerializedMessage from serialized_data
+          rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
+          handlers_["/tf_static"].handler->process_message(ser_msg, "/tf_static", -1);
+          handlers_["/tf_static"].handler->save_msg_to_file(-1);
+          tf_extracted_ = true;
+        }
+        continue;
+      }
+
       size_t current_index = handler_it->second.current_index;
 
       // Find the sample interval for the topic

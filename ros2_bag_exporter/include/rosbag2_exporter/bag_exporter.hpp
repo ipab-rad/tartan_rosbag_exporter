@@ -15,6 +15,7 @@
 #include "rosbag2_exporter/handlers/image_handler.hpp"
 #include "rosbag2_exporter/handlers/imu_handler.hpp"
 #include "rosbag2_exporter/handlers/pointcloud_handler.hpp"
+#include "rosbag2_exporter/handlers/tf_handler.hpp"
 #include "rosbag2_storage/storage_options.hpp"
 
 #include <yaml-cpp/yaml.h>
@@ -31,7 +32,7 @@
 namespace rosbag2_exporter
 {
 
-enum class MessageType { PointCloud2, Image, CompressedImage, IMU, GPS, Unknown };
+enum class MessageType { PointCloud2, Image, CompressedImage, IMU, GPS, TF, Unknown };
 
 struct TopicConfig
 {
@@ -59,6 +60,7 @@ private:
   void export_bag();
   void create_metadata_file();
 
+  bool tf_extracted_;
   std::string bag_path_;
   std::string output_dir_;
   std::string storage_id_;

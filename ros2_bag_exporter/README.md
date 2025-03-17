@@ -12,6 +12,7 @@ ros2_bag_exporter is  C++ package designed to export ROS 2 (Humble) bag files in
 - **CompressedImage**: Convert image messages to JPG or PNG format.
 - **IMU**: Export IMU data for inertial measurement analysis.
 - **GPS**: Export GPS coordinates and data.
+- **TF**: Export vehicle's static transformations.
 
 #### Automatic Metadata generation
 - Automatically generate metadata by associating sensor message timestamps. The output YAML will specify which camera messages correspond to timestamps from the main LIDAR sensor. This is particularly useful for data labelling tasks where the LIDAR serves as the primary reference sensor
@@ -79,6 +80,10 @@ topics:
     type: "PointCloud2"
     sample_interval: 10   # Write one sample every 10 messages
     topic_dir: "lidar"
+  - name: "/tf_static"
+    type: "TF"
+    sample_interval: 1   # Not used for TF
+    topic_dir: "transforms"
 ```
 
 #### Parameter Descriptions
@@ -89,7 +94,7 @@ topics:
   - `mcap`: For MCAP storage format.
 - `topics`: A list of topics to export. Each topic requires:
   - `name`: The ROS 2 topic name.
-  - `type`: The message type (`PointCloud2`, `Image`, `CompressedImage`, `IMU`, `GPS`).
+  - `type`: The message type (`PointCloud2`, `Image`, `CompressedImage`, `IMU`, `GPS` and `TF`).
   - `sample_interval`: The interval at which messages will be exported (e.g., 1 for every 2 messages).
   - `topic_dir`: The name of the directory where the sensor data from the topic will be saved. The directory is created in `<output_dir>/<bag_name>/`.
 
