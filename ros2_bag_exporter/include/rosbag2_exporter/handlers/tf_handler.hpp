@@ -46,7 +46,7 @@ public:
     create_yaml(tf_msg);
 
     // Create the full file path with '.csv' as the extension
-    std::string filepath = topic_dir_ + "/tf_tree" + ".yaml";
+    std::string filepath = topic_dir_ + "/transforms" + ".yaml";
 
     data_meta_ = DataMeta{filepath, builtin_interfaces::msg::Time(), global_id};
 
