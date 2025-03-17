@@ -10,6 +10,7 @@ ros2_bag_exporter is  C++ package designed to export ROS 2 (Humble) bag files in
 - **PointCloud2**: Export point cloud data to PCD files.
 - **Image**: Convert image messages to PNG format.
 - **CompressedImage**: Convert image messages to JPG or PNG format.
+- **CameraInfo**: Export camera calibration data.
 - **IMU**: Export IMU data for inertial measurement analysis.
 - **GPS**: Export GPS coordinates and data.
 - **TF**: Export vehicle's static transformations.
@@ -68,6 +69,10 @@ topics:
     type: "CompressedImage"
     sample_interval: 5   # Write one sample every 5 messages
     topic_dir: "img/compressed"
+  - name: "/camera/color/image_raw/camera_info"
+    type: "CameraInfo"
+    sample_interval: 5   # Not used for this type
+    topic_dir: "img/compressed/calibration"
   - name: "/imu_topic"
     type: "IMU"
     sample_interval: 100  # Write one sample every 100 messages
@@ -94,7 +99,7 @@ topics:
   - `mcap`: For MCAP storage format.
 - `topics`: A list of topics to export. Each topic requires:
   - `name`: The ROS 2 topic name.
-  - `type`: The message type (`PointCloud2`, `Image`, `CompressedImage`, `IMU`, `GPS` and `TF`).
+  - `type`: The message type (`PointCloud2`, `Image`, `CompressedImage`,`CameraInfo`,`IMU`, `GPS` and `TF`).
   - `sample_interval`: The interval at which messages will be exported (e.g., 1 for every 2 messages).
   - `topic_dir`: The name of the directory where the sensor data from the topic will be saved. The directory is created in `<output_dir>/<bag_name>/`.
 

@@ -10,6 +10,7 @@
 #include "rosbag2_cpp/converter_options.hpp"
 #include "rosbag2_cpp/readers/sequential_reader.hpp"
 #include "rosbag2_exporter/handlers/base_handler.hpp"
+#include "rosbag2_exporter/handlers/camera_info_handler.hpp"
 #include "rosbag2_exporter/handlers/compressed_image_handler.hpp"
 #include "rosbag2_exporter/handlers/gps_handler.hpp"
 #include "rosbag2_exporter/handlers/image_handler.hpp"
@@ -32,7 +33,7 @@
 namespace rosbag2_exporter
 {
 
-enum class MessageType { PointCloud2, Image, CompressedImage, IMU, GPS, TF, Unknown };
+enum class MessageType { PointCloud2, Image, CompressedImage, CameraInfo, IMU, GPS, TF, Unknown };
 
 struct TopicConfig
 {
@@ -47,6 +48,7 @@ struct Handler
 {
   std::shared_ptr<BaseHandler> handler;
   size_t current_index;
+  bool exported;
 };
 
 class BagExporter : public rclcpp::Node
@@ -61,11 +63,13 @@ private:
   void create_metadata_file();
 
   bool tf_extracted_;
+  bool all_cameras_info_extracted_;
   std::string bag_path_;
   std::string output_dir_;
   std::string storage_id_;
   std::string rosbag_base_name_;
   std::vector<TopicConfig> topics_;
+  std::vector<std::string> cam_info_topics_;
   std::map<std::string, Handler> handlers_;
 };
 

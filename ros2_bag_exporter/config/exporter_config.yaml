@@ -32,6 +32,12 @@ topics:
     sample_interval: 5               # Write one sample every 5 messages
     topic_dir: "cam/compressed"      # Output data in <output_dir>/<bag_name>/cam/compressed
 
+  # Configuration for the compressed image info topic
+  - name: "/image_topic/camera_info" # Name of the topic to extract
+    type: "CameraInfo"               # Data type of the topic
+    sample_interval: 5               # Not used
+    topic_dir: "cam/compressed"      # Output data in <output_dir>/<bag_name>/cam/compressed
+
   # Configuration for the IMU (Inertial Measurement Unit) topic
   - name: "/imu_topic"          # Name of the topic to extract
     type: "IMU"                 # Data type of the topic

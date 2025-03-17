@@ -49,8 +49,6 @@ public:
     std::string filepath = topic_dir_ + "/transforms" + ".yaml";
 
     data_meta_ = DataMeta{filepath, builtin_interfaces::msg::Time(), global_id};
-
-    RCLCPP_DEBUG(logger_, "Successfully wrote GPS data to %s", filepath.c_str());
   }
 
   bool save_msg_to_file([[maybe_unused]] size_t index) override
