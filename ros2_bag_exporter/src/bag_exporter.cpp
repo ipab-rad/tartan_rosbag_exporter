@@ -52,7 +52,7 @@ BagExporter::BagExporter(const rclcpp::NodeOptions & options)
   std::chrono::duration<double> duration = end_time_point - start_time_point;
   double elapsed_time = duration.count();
 
-  RCLCPP_INFO(this->get_logger(), "Sensor data exportation took %f secs \U0001F525", elapsed_time);
+  RCLCPP_INFO(this->get_logger(), "Sensor data exportation took %f secs 🔥", elapsed_time);
 }
 
 void BagExporter::load_configuration(const std::string & config_file)
@@ -187,11 +187,10 @@ void BagExporter::export_bag()
         return ti.topic_metadata.name == topic_name;
       });
     if (it == metadata.end()) {
-      RCLCPP_WARN(
-        this->get_logger(), "Topic '%s' not found in the bag \U0000274C", topic_name.c_str());
+      RCLCPP_WARN(this->get_logger(), "Topic '%s' not found in the bag ❌", topic_name.c_str());
       handler.handler.reset();  // Remove handler if topic not found
     } else {
-      RCLCPP_INFO(this->get_logger(), "'%s' topic found \U00002705", topic_name.c_str());
+      RCLCPP_INFO(this->get_logger(), "'%s' topic found 🗸", topic_name.c_str());
 
       auto cam_info_topic_it = std::find_if(
         cam_info_topics_.begin(), cam_info_topics_.end(),
@@ -402,7 +401,7 @@ void BagExporter::create_metadata_file()
   yaml_file.close();
 
   RCLCPP_INFO(
-    this->get_logger(), "\U0001F680 Metadata file created in:\n" CYAN_LOG "%s" COLOR_RESET,
+    this->get_logger(), "🚀 Metadata file created in:\n" CYAN_LOG "%s" COLOR_RESET,
     yaml_path.c_str());
 }
 
