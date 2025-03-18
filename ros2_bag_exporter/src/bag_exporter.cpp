@@ -65,7 +65,8 @@ void BagExporter::load_configuration(const std::string & config_file)
     output_dir_ = config["output_dir"].as<std::string>();
     storage_id_ = config["storage_id"].as<std::string>();
 
-    RCLCPP_INFO(this->get_logger(), "Reading from:\n \033[35m%s\033[0m", bag_path_.c_str());
+    RCLCPP_INFO(
+      this->get_logger(), "Reading from:\n" MAGENTA_LOG "%s" COLOR_RESET, bag_path_.c_str());
 
     for (const auto & topic : config["topics"]) {
       TopicConfig tc;
@@ -309,7 +310,8 @@ void BagExporter::create_metadata_file()
   // the first sensor defined in the YAML file, used as the time sync reference.
   auto & main_sensor_handler = handlers_[topics_[0].name].handler;
   RCLCPP_INFO(
-    this->get_logger(), "Using '%s' timestamp for cameras' time synchronisation",
+    this->get_logger(),
+    "Using " BOLD_LOG "%s" COLOR_RESET " timestamp for cameras' time synchronisation",
     topics_[0].name.c_str());
 
   std::vector<size_t> msg_index(topics_.size(), 0);
@@ -406,7 +408,7 @@ void BagExporter::create_metadata_file()
   yaml_file.close();
 
   RCLCPP_INFO(
-    this->get_logger(), "\U0001F680 Metadata file created in: \033[36m%s\033[0m",
+    this->get_logger(), "\U0001F680 Metadata file created in:\n" CYAN_LOG "%s" COLOR_RESET,
     yaml_path.c_str());
 }
 

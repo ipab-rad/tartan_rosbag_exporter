@@ -10,6 +10,12 @@
 #include <string>
 #include <vector>
 
+// ANSI escape codes for colourised terminal output
+#define COLOR_RESET "\033[0m"
+#define MAGENTA_LOG "\033[35m"
+#define BOLD_LOG "\033[1m"
+#define CYAN_LOG "\033[36m"
+
 namespace rosbag2_exporter
 {
 
