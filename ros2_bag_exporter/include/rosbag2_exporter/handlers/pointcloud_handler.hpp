@@ -33,9 +33,7 @@ public:
   {
   }
 
-  void process_message(
-    const rclcpp::SerializedMessage & serialized_msg, const std::string & topic,
-    size_t global_id) override
+  void process_message(const rclcpp::SerializedMessage & serialized_msg, size_t global_id) override
   {
     sensor_msgs::msg::PointCloud2 pc2_msg;
     rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serializer;

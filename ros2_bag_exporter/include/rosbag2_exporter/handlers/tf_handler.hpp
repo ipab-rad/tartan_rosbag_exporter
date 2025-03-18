@@ -33,9 +33,7 @@ public:
   {
   }
 
-  void process_message(
-    const rclcpp::SerializedMessage & serialized_msg, [[maybe_unused]] const std::string & topic,
-    size_t global_id) override
+  void process_message(const rclcpp::SerializedMessage & serialized_msg, size_t global_id) override
   {
     // Deserialize the incoming message
     tf2_msgs::msg::TFMessage tf_msg;
@@ -86,7 +84,7 @@ private:
       transforms.push_back(tf_node);
     }
 
-    // Save the tf sequence ina top-level "transforms" key
+    // Save the tf sequence in a top-level "transforms" key
     yaml_root_["transforms"] = transforms;
   }
 

@@ -31,9 +31,7 @@ public:
   {
   }
 
-  void process_message(
-    const rclcpp::SerializedMessage & serialized_msg, [[maybe_unused]] const std::string & topic,
-    size_t global_id) override
+  void process_message(const rclcpp::SerializedMessage & serialized_msg, size_t global_id) override
   {
     // Deserialize the incoming message
     sensor_msgs::msg::CameraInfo cam_info_msg;

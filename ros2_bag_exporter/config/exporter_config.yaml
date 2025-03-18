@@ -35,7 +35,7 @@ topics:
   # Configuration for the compressed image info topic
   - name: "/image_topic/camera_info" # Name of the topic to extract
     type: "CameraInfo"               # Data type of the topic
-    sample_interval: 5               # Not used
+    sample_interval: 0               # Not used for this type
     topic_dir: "cam/compressed"      # Output data in <output_dir>/<bag_name>/cam/compressed
 
   # Configuration for the IMU (Inertial Measurement Unit) topic
@@ -53,5 +53,5 @@ topics:
   # Configuration for the TF topic (exported only once)
   - name: "/tf_static"          # Name of the topic to extract
     type: "TF"                  # Data type of the topic
-    sample_interval: 1          # Not used for TF
+    sample_interval: 0          # Not used for this type
     topic_dir: "extrinsics"     # Output data in <output_dir>/<bag_name>/extrinsics

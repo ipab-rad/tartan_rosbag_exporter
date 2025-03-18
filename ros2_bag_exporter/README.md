@@ -71,7 +71,7 @@ topics:
     topic_dir: "img/compressed"
   - name: "/camera/color/image_raw/camera_info"
     type: "CameraInfo"
-    sample_interval: 5   # Not used for this type
+    sample_interval: 0   # Not used for this type
     topic_dir: "img/compressed/calibration"
   - name: "/imu_topic"
     type: "IMU"
@@ -87,7 +87,7 @@ topics:
     topic_dir: "lidar"
   - name: "/tf_static"
     type: "TF"
-    sample_interval: 1   # Not used for TF
+    sample_interval: 0   # Not used for this type
     topic_dir: "transforms"
 ```
 

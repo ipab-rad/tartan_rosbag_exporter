@@ -223,8 +223,8 @@ void BagExporter::export_bag()
         if (!tf_extracted_) {
           // Construct rclcpp::SerializedMessage from serialized_data
           rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
-          handlers_["/tf_static"].handler->process_message(ser_msg, "/tf_static", global_id);
-          handlers_["/tf_static"].handler->save_msg_to_file(-1);
+          handlers_["/tf_static"].handler->process_message(ser_msg, global_id);
+          handlers_["/tf_static"].handler->save_msg_to_file(0);
           tf_extracted_ = true;
         }
 
@@ -246,8 +246,8 @@ void BagExporter::export_bag()
           if (!cam_info_handler.exported) {
             rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
-            cam_info_handler.handler->process_message(ser_msg, topic, global_id);
-            cam_info_handler.handler->save_msg_to_file(-1);
+            cam_info_handler.handler->process_message(ser_msg, global_id);
+            cam_info_handler.handler->save_msg_to_file(0);
 
             // Increase counter
             camera_info_extracted_n += 1;
@@ -282,7 +282,7 @@ void BagExporter::export_bag()
           rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
           // Process the message
-          handler_it->second.handler->process_message(ser_msg, topic, global_id);
+          handler_it->second.handler->process_message(ser_msg, global_id);
         }
       } else {
         RCLCPP_WARN(this->get_logger(), "No configuration found for topic: %s", topic.c_str());
