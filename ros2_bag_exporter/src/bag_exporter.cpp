@@ -280,13 +280,7 @@ void BagExporter::export_bag()
         // Only write the message if it matches the sampling rate
         if (current_index % sample_interval == 0) {
           // Construct rclcpp::SerializedMessage from serialized_data
-          rclcpp::SerializedMessage ser_msg;
-          size_t buffer_length = serialized_msg->serialized_data->buffer_length;
-          ser_msg.reserve(buffer_length);
-          std::memcpy(
-            ser_msg.get_rcl_serialized_message().buffer, serialized_msg->serialized_data->buffer,
-            buffer_length);
-          ser_msg.get_rcl_serialized_message().buffer_length = buffer_length;
+          rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
           // Process the message
           handler_it->second.handler->process_message(ser_msg, topic, global_id);
