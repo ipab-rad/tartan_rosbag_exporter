@@ -190,7 +190,7 @@ void BagExporter::export_bag()
       RCLCPP_WARN(this->get_logger(), "Topic '%s' not found in the bag ❌", topic_name.c_str());
       handler.handler.reset();  // Remove handler if topic not found
     } else {
-      RCLCPP_INFO(this->get_logger(), "'%s' topic found 🗸", topic_name.c_str());
+      RCLCPP_INFO(this->get_logger(), "'%s' topic found ✅", topic_name.c_str());
 
       auto cam_info_topic_it = std::find_if(
         cam_info_topics_.begin(), cam_info_topics_.end(),
