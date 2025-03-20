@@ -39,9 +39,7 @@ public:
   }
 
   // Handle compressed image messages
-  void process_message(
-    const rclcpp::SerializedMessage & serialized_msg, const std::string & topic,
-    size_t global_id) override
+  void process_message(const rclcpp::SerializedMessage & serialized_msg, size_t global_id) override
   {
     // Deserialize the incoming compressed image message
     sensor_msgs::msg::CompressedImage compressed_img;

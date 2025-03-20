@@ -50,9 +50,7 @@ public:
   }
 
   // Handle uncompressed image messages
-  void process_message(
-    const rclcpp::SerializedMessage & serialized_msg, const std::string & topic,
-    size_t global_id) override
+  void process_message(const rclcpp::SerializedMessage & serialized_msg, size_t global_id) override
   {
     // Deserialize the incoming uncompressed image message
     sensor_msgs::msg::Image img_msg;

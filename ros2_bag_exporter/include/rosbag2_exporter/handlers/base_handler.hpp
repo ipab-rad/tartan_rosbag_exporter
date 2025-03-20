@@ -41,8 +41,7 @@ public:
 
   // Pure virtual function to process messages
   virtual void process_message(
-    const rclcpp::SerializedMessage & serialized_msg, const std::string & topic,
-    size_t global_id) = 0;
+    const rclcpp::SerializedMessage & serialized_msg, size_t global_id) = 0;
 
   virtual bool save_msg_to_file(size_t index) = 0;
 

@@ -17,7 +17,8 @@
 namespace rosbag2_exporter
 {
 
-BagExporter::BagExporter(const rclcpp::NodeOptions & options) : Node("rosbag2_exporter", options)
+BagExporter::BagExporter(const rclcpp::NodeOptions & options)
+: Node("rosbag2_exporter", options), tf_extracted_(false), all_cameras_info_extracted_(false)
 {
   // Find the package share directory
   std::string package_share_directory;
@@ -51,7 +52,7 @@ BagExporter::BagExporter(const rclcpp::NodeOptions & options) : Node("rosbag2_ex
   std::chrono::duration<double> duration = end_time_point - start_time_point;
   double elapsed_time = duration.count();
 
-  RCLCPP_INFO(this->get_logger(), "Sensor data exportation took %f secs \U0001F525", elapsed_time);
+  RCLCPP_INFO(this->get_logger(), "Sensor data exportation took %f secs 🔥", elapsed_time);
 }
 
 void BagExporter::load_configuration(const std::string & config_file)
@@ -64,7 +65,8 @@ void BagExporter::load_configuration(const std::string & config_file)
     output_dir_ = config["output_dir"].as<std::string>();
     storage_id_ = config["storage_id"].as<std::string>();
 
-    RCLCPP_INFO(this->get_logger(), "Reading from:\n \033[35m%s\033[0m", bag_path_.c_str());
+    RCLCPP_INFO(
+      this->get_logger(), "Reading from:\n" MAGENTA_LOG "%s" COLOR_RESET, bag_path_.c_str());
 
     for (const auto & topic : config["topics"]) {
       TopicConfig tc;
@@ -85,10 +87,14 @@ void BagExporter::load_configuration(const std::string & config_file)
         tc.type = MessageType::CompressedImage;
         tc.encoding =
           topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8";  // default encoding
+      } else if (type == "CameraInfo") {
+        tc.type = MessageType::CameraInfo;
       } else if (type == "IMU") {
         tc.type = MessageType::IMU;
       } else if (type == "GPS") {
         tc.type = MessageType::GPS;
+      } else if (type == "TF") {
+        tc.type = MessageType::TF;
       } else {
         tc.type = MessageType::Unknown;
       }
@@ -121,21 +127,28 @@ void BagExporter::setup_handlers()
     // Initialize handler based on message type
     if (topic.type == MessageType::PointCloud2) {
       auto handler = std::make_shared<PointCloudHandler>(abs_topic_dir, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0};
+      handlers_[topic.name] = Handler{handler, 0, false};
     } else if (topic.type == MessageType::Image) {
       auto handler =
         std::make_shared<ImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0};
+      handlers_[topic.name] = Handler{handler, 0, false};
     } else if (topic.type == MessageType::CompressedImage) {
       auto handler =
         std::make_shared<CompressedImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0};
+      handlers_[topic.name] = Handler{handler, 0, false};
+    } else if (topic.type == MessageType::CameraInfo) {
+      auto handler = std::make_shared<CameraInfoHandler>(abs_topic_dir, this->get_logger());
+      handlers_[topic.name] = Handler{handler, 0, false};
+      cam_info_topics_.push_back(topic.name);
     } else if (topic.type == MessageType::IMU) {
       auto handler = std::make_shared<IMUHandler>(abs_topic_dir, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0};
+      handlers_[topic.name] = Handler{handler, 0, false};
     } else if (topic.type == MessageType::GPS) {
       auto handler = std::make_shared<GPSHandler>(abs_topic_dir, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0};
+      handlers_[topic.name] = Handler{handler, 0, false};
+    } else if (topic.type == MessageType::TF) {
+      auto handler = std::make_shared<TFHandler>(abs_topic_dir, this->get_logger());
+      handlers_[topic.name] = Handler{handler, 0, false};
     } else {
       RCLCPP_WARN(
         this->get_logger(), "Unsupported message type for topic '%s'. Skipping.",
@@ -174,12 +187,21 @@ void BagExporter::export_bag()
         return ti.topic_metadata.name == topic_name;
       });
     if (it == metadata.end()) {
-      RCLCPP_WARN(
-        this->get_logger(), "Topic '%s' not found in the bag \U0000274C", topic_name.c_str());
+      RCLCPP_WARN(this->get_logger(), "Topic '%s' not found in the bag ❌", topic_name.c_str());
       handler.handler.reset();  // Remove handler if topic not found
     } else {
-      RCLCPP_INFO(this->get_logger(), "'%s' topic found \U00002705", topic_name.c_str());
-      total_bag_messages += it->message_count;
+      RCLCPP_INFO(this->get_logger(), "'%s' topic found ✅", topic_name.c_str());
+
+      auto cam_info_topic_it = std::find_if(
+        cam_info_topics_.begin(), cam_info_topics_.end(),
+        [&topic_name](const std::string & topic) { return topic == topic_name; });
+
+      // Only one camera info message will be saved per topic
+      if (cam_info_topic_it != cam_info_topics_.end()) {
+        total_bag_messages += 1;
+      } else {
+        total_bag_messages += it->message_count;
+      }
     }
   }
 
@@ -187,6 +209,8 @@ void BagExporter::export_bag()
 
   // Global id counter
   size_t global_id = 0;
+  // Camera info tracking
+  size_t camera_info_extracted_n = 0;
   // Read and process messages
   while (reader.has_next()) {
     auto serialized_msg = reader.read_next();
@@ -194,6 +218,54 @@ void BagExporter::export_bag()
 
     auto handler_it = handlers_.find(topic);
     if (handler_it != handlers_.end() && handler_it->second.handler) {
+      // Only process /tf_static once
+      if (topic == "/tf_static") {
+        if (!tf_extracted_) {
+          // Construct rclcpp::SerializedMessage from serialized_data
+          rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
+          handlers_["/tf_static"].handler->process_message(ser_msg, global_id);
+          handlers_["/tf_static"].handler->save_msg_to_file(0);
+          tf_extracted_ = true;
+        }
+
+        global_id += 1;
+        continue;
+      }
+
+      // Only process cameras' info once
+      if (!all_cameras_info_extracted_) {
+        // Find if the current topic is one of the camera's info
+        auto cam_info_topic_it = std::find_if(
+          cam_info_topics_.begin(), cam_info_topics_.end(),
+          [&topic](const std::string & topic_name) { return topic_name == topic; });
+
+        if (cam_info_topic_it != cam_info_topics_.end()) {
+          // If the current topic belongs to the camera info handler and
+          //  hasn't been processed yet, process it.
+          auto cam_info_handler = handlers_[topic];
+          if (!cam_info_handler.exported) {
+            rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
+
+            cam_info_handler.handler->process_message(ser_msg, global_id);
+            cam_info_handler.handler->save_msg_to_file(0);
+
+            // Increase counter
+            camera_info_extracted_n += 1;
+
+            // Do not export again
+            cam_info_handler.exported = true;
+
+            global_id += 1;
+          }
+
+          // Check if we are done with them
+          if (camera_info_extracted_n == cam_info_topics_.size()) {
+            all_cameras_info_extracted_ = true;
+          }
+          continue;
+        }
+      }
+
       size_t current_index = handler_it->second.current_index;
 
       // Find the sample interval for the topic
@@ -207,16 +279,10 @@ void BagExporter::export_bag()
         // Only write the message if it matches the sampling rate
         if (current_index % sample_interval == 0) {
           // Construct rclcpp::SerializedMessage from serialized_data
-          rclcpp::SerializedMessage ser_msg;
-          size_t buffer_length = serialized_msg->serialized_data->buffer_length;
-          ser_msg.reserve(buffer_length);
-          std::memcpy(
-            ser_msg.get_rcl_serialized_message().buffer, serialized_msg->serialized_data->buffer,
-            buffer_length);
-          ser_msg.get_rcl_serialized_message().buffer_length = buffer_length;
+          rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
           // Process the message
-          handler_it->second.handler->process_message(ser_msg, topic, global_id);
+          handler_it->second.handler->process_message(ser_msg, global_id);
         }
       } else {
         RCLCPP_WARN(this->get_logger(), "No configuration found for topic: %s", topic.c_str());
@@ -237,7 +303,8 @@ void BagExporter::create_metadata_file()
   // the first sensor defined in the YAML file, used as the time sync reference.
   auto & main_sensor_handler = handlers_[topics_[0].name].handler;
   RCLCPP_INFO(
-    this->get_logger(), "Using '%s' timestamp for cameras' time synchronisation",
+    this->get_logger(),
+    "Using " BOLD_LOG "%s" COLOR_RESET " timestamp for cameras' time synchronisation",
     topics_[0].name.c_str());
 
   std::vector<size_t> msg_index(topics_.size(), 0);
@@ -334,7 +401,7 @@ void BagExporter::create_metadata_file()
   yaml_file.close();
 
   RCLCPP_INFO(
-    this->get_logger(), "\U0001F680 Metadata file created in: \033[36m%s\033[0m",
+    this->get_logger(), "🚀 Metadata file created in:\n" CYAN_LOG "%s" COLOR_RESET,
     yaml_path.c_str());
 }
 
