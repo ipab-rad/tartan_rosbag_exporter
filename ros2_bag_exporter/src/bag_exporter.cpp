@@ -224,7 +224,9 @@ void BagExporter::export_bag()
           // Construct rclcpp::SerializedMessage from serialized_data
           rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
           handlers_["/tf_static"].handler->process_message(ser_msg, global_id);
-          handlers_["/tf_static"].handler->save_msg_to_file(0);
+          if (handlers_["/tf_static"].handler->save_msg_to_file(0)) {
+            throw std::runtime_error("Failed to save tf_static message to file");
+          }
           tf_extracted_ = true;
         }
 
@@ -247,7 +249,9 @@ void BagExporter::export_bag()
             rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
             cam_info_handler.handler->process_message(ser_msg, global_id);
-            cam_info_handler.handler->save_msg_to_file(0);
+            if (!cam_info_handler.handler->save_msg_to_file(0)) {
+              throw std::runtime_error("Failed to save camera info message to file");
+            }
 
             // Increase counter
             camera_info_extracted_n += 1;
@@ -331,9 +335,9 @@ void BagExporter::create_metadata_file()
 
     // Save this pointcloud
     if (!main_sensor_handler->save_msg_to_file(idx)) {
-      RCLCPP_WARN(
-        this->get_logger(), "Unable to save pointcloud msg as file, global_id: %li",
-        main_data_meta.global_id);
+      throw std::runtime_error(
+        "Unable to save pointcloud msg as file, global_id: " +
+        std::to_string(main_data_meta.global_id));
     }
 
     // Save file name relative to rosbag_base_name_
@@ -370,9 +374,9 @@ void BagExporter::create_metadata_file()
 
       // Save this image
       if (!curr_cam_handler->save_msg_to_file(closest_time_index)) {
-        RCLCPP_WARN(
-          this->get_logger(), "Unable to save image msg as file, global_id: %li",
-          main_data_meta.global_id);
+        throw std::runtime_error(
+          "Unable to save image msg as file, global_id: " +
+          std::to_string(main_data_meta.global_id));
       }
 
       // Save file name relative to rosbag_base_name_

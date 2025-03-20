@@ -42,8 +42,9 @@ public:
   {
     // Validate or set default encoding if not provided
     if (encoding.empty()) {
-      RCLCPP_WARN(logger, "No encoding provided. Defaulting to 'rgb8'.");
-      encoding_ = "rgb8";  // Default to rgb8 if encoding is not provided
+      RCLCPP_WARN(logger, "No encoding provided. Defaulting to 'bgr8'.");
+      // Default to bgr8 if encoding is not provided
+      encoding_ = "bgr8";
     } else {
       encoding_ = encoding;
     }
@@ -90,32 +91,14 @@ public:
     try {
       cv_ptr = cv_bridge::toCvCopy(img_msg, encoding_);
     } catch (const cv_bridge::Exception & e) {
-      RCLCPP_WARN(logger_, "CV Bridge exception: %s. Using default encoding 'rgb8'.", e.what());
-
-      // Attempt to fallback to the default 'rgb8' encoding
-      try {
-        cv_ptr = cv_bridge::toCvCopy(img_msg, "rgb8");
-        encoding_ = "rgb8";  // Update to fallback encoding
-      } catch (const cv_bridge::Exception & e2) {
-        RCLCPP_WARN(logger_, "Fallback to 'rgb8' failed: %s", e2.what());
-        return false;
-      }
+      throw std::runtime_error(
+        "CV Bridge failed to convert to the requested encoding: " + encoding_);
     }
-
-    // Apply color conversion based on encoding
+    // cv_bridge can correctly convert 'bayer_rggb8' or 'bayer_bggr8' to BGR8 or Mono8.
+    // If "rgb8" is needed, an extra conversion is required since cv_bridge doesn't handle it
+    // directly
     if (encoding_ == "rgb8") {
-      // Convert from RGB to BGR for saving with OpenCV (OpenCV uses BGR)
       cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_RGB2BGR);
-    } else if (encoding_ == "bgr8") {
-      // No conversion needed, OpenCV already uses BGR format
-      RCLCPP_DEBUG(logger_, "Image is already in 'bgr8', no conversion applied.");
-    } else if (encoding_ == "mono8" || encoding_ == "mono16") {
-      // Grayscale images (mono8 or mono16), no color conversion needed
-      RCLCPP_DEBUG(
-        logger_, "Image is grayscale (%s), no color conversion applied.", encoding_.c_str());
-    } else {
-      RCLCPP_WARN(
-        logger_, "Unsupported image encoding '%s'. Skipping color conversion.", encoding_.c_str());
     }
 
     // Write the image to disk

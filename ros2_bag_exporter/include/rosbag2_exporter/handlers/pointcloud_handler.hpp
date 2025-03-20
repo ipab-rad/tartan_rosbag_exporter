@@ -71,15 +71,13 @@ public:
       pc2_msg.fields.begin(), pc2_msg.fields.end(),
       [](const auto & field) { return field.name == "intensity"; });
 
-    // Create the appropriate point cloud, convert the ROS message, and save it
+    // Create the point cloud, convert the ROS message, and save it
     if (has_intensity) {
       pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
       pcl::fromROSMsg(pc2_msg, *cloud);
       return save_pointcloud_to_file<pcl::PointXYZI>(cloud, data_meta.data_path);
     } else {
-      pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-      pcl::fromROSMsg(pc2_msg, *cloud);
-      return save_pointcloud_to_file<pcl::PointXYZ>(cloud, data_meta.data_path);
+      throw std::runtime_error("The pointcloud message should have an 'intensity' field!");
     }
   }
 
