@@ -23,6 +23,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -55,10 +56,9 @@ public:
     } else if (compressed_img.format.find("png") != std::string::npos) {
       extension = ".png";
     } else {
-      RCLCPP_WARN(
-        logger_, "Unknown compressed image format: %s. Defaulting to '.jpg'",
-        compressed_img.format.c_str());
-      extension = ".jpg";  // Default to JPEG if unknown
+      // Only support .jpg and .png formats
+      throw std::invalid_argument(
+        "Unsupported compressed image format found: " + compressed_img.format);
     }
 
     // Create a timestamped filename and save compressed image directly
