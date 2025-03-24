@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -77,7 +78,7 @@ public:
       pcl::fromROSMsg(pc2_msg, *cloud);
       return save_pointcloud_to_file<pcl::PointXYZI>(cloud, data_meta.data_path);
     } else {
-      throw std::runtime_error("The pointcloud message should have an 'intensity' field!");
+      throw std::invalid_argument("The pointcloud message should have an 'intensity' field!");
     }
   }
 

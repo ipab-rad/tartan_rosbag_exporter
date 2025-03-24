@@ -57,7 +57,7 @@ public:
       extension = ".png";
     } else {
       // Only support .jpg and .png formats
-      throw std::runtime_error(
+      throw std::invalid_argument(
         "Unsupported compressed image format found: " + compressed_img.format);
     }
 
