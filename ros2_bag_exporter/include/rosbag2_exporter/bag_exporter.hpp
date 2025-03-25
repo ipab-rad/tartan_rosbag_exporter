@@ -48,7 +48,6 @@ struct Handler
 {
   std::shared_ptr<BaseHandler> handler;
   size_t current_index;
-  bool exported;
 };
 
 class BagExporter : public rclcpp::Node

@@ -127,28 +127,28 @@ void BagExporter::setup_handlers()
     // Initialize handler based on message type
     if (topic.type == MessageType::PointCloud2) {
       auto handler = std::make_shared<PointCloudHandler>(abs_topic_dir, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0, false};
+      handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::Image) {
       auto handler =
         std::make_shared<ImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0, false};
+      handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::CompressedImage) {
       auto handler =
         std::make_shared<CompressedImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0, false};
+      handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::CameraInfo) {
       auto handler = std::make_shared<CameraInfoHandler>(abs_topic_dir, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0, false};
+      handlers_[topic.name] = Handler{handler, 0};
       cam_info_topics_.push_back(topic.name);
     } else if (topic.type == MessageType::IMU) {
       auto handler = std::make_shared<IMUHandler>(abs_topic_dir, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0, false};
+      handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::GPS) {
       auto handler = std::make_shared<GPSHandler>(abs_topic_dir, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0, false};
+      handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::TF) {
       auto handler = std::make_shared<TFHandler>(abs_topic_dir, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0, false};
+      handlers_[topic.name] = Handler{handler, 0};
     } else {
       RCLCPP_WARN(
         this->get_logger(), "Unsupported message type for topic '%s'. Skipping.",
@@ -224,7 +224,7 @@ void BagExporter::export_bag()
           // Construct rclcpp::SerializedMessage from serialized_data
           rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
           handlers_["/tf_static"].handler->process_message(ser_msg, global_id);
-          if (handlers_["/tf_static"].handler->save_msg_to_file(0)) {
+          if (!handlers_["/tf_static"].handler->save_msg_to_file(0)) {
             throw std::runtime_error("Failed to save tf_static message to file");
           }
           tf_extracted_ = true;
@@ -234,7 +234,6 @@ void BagExporter::export_bag()
         continue;
       }
 
-      // Only process cameras' info once
       if (!all_cameras_info_extracted_) {
         // Find if the current topic is one of the camera's info
         auto cam_info_topic_it = std::find_if(
@@ -242,27 +241,25 @@ void BagExporter::export_bag()
           [&topic](const std::string & topic_name) { return topic_name == topic; });
 
         if (cam_info_topic_it != cam_info_topics_.end()) {
-          // If the current topic belongs to the camera info handler and
-          //  hasn't been processed yet, process it.
+          // If the current topic is a CameraInfo msg, process it.
           auto cam_info_handler = handlers_[topic];
-          if (!cam_info_handler.exported) {
-            rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
+          rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
-            cam_info_handler.handler->process_message(ser_msg, global_id);
-            if (!cam_info_handler.handler->save_msg_to_file(0)) {
-              throw std::runtime_error("Failed to save camera info message to file");
-            }
-
-            // Increase counter
-            camera_info_extracted_n += 1;
-
-            // Do not export again
-            cam_info_handler.exported = true;
-
-            global_id += 1;
+          cam_info_handler.handler->process_message(ser_msg, global_id);
+          if (!cam_info_handler.handler->save_msg_to_file(0)) {
+            throw std::runtime_error("Failed to save camera info message to file");
           }
 
-          // Check if we are done with them
+          // Increase counter
+          camera_info_extracted_n += 1;
+
+          // Remove this camera info handler so we do not
+          // evaluate this topic again
+          handler_it->second.handler.reset();
+
+          global_id += 1;
+
+          // Check if we are done with all the camera info messages
           if (camera_info_extracted_n == cam_info_topics_.size()) {
             all_cameras_info_extracted_ = true;
           }
