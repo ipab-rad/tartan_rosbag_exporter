@@ -56,7 +56,6 @@ The behavior of `ros2_bag_exporter` is controlled via a YAML configuration file.
 
 #### Configuration File Structure
 ```yaml
-bag_path: "/absolute/path/to/your/my_rosbag.mcap"
 output_dir: "/absolute/path/to/output/directory"
 storage_id: "mcap"  # Common storage ID; ensure it matches your bag's storage format
 topics:
@@ -91,8 +90,9 @@ topics:
     topic_dir: "transforms"
 ```
 
+<!-- - `bag_path`: The absolute path to the ROS 2 bag file you wish to export. -->
+
 #### Parameter Descriptions
-- `bag_path`: The absolute path to the ROS 2 bag file you wish to export.
 - `output_dir`: The absolute path to the directory where exported files will be saved.
 - `storage_id`: Specifies the storage format of the bag file. Common values include:
   - `sqlite3`: Default storage for ROS 2 bags.
@@ -106,10 +106,11 @@ topics:
 ### Run
 After building and sourcing the workspace, run the `bag_exporter` node using the following command:
 ```bash
-ros2 run ros2_bag_exporter bag_exporter --ros-args -p config_file:=<path_to_config>
+ros2 run ros2_bag_exporter bag_exporter --ros-args -p rosbag:=<path_to_rosbag.mcap> -p config_file:=<path_to_config>
 ```
 #### Command-Line Arguments
-- `<path_to_config>`: Specify a custom path to the YAML configuration file.
+- `rosbag`: The path to the ROS 2 bag file you wish to export. Only `.mcap` format is supported.
+- `config_file`: Specify a custom path to the YAML configuration file.
 
 ### Output
 

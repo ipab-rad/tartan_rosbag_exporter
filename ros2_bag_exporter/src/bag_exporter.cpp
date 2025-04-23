@@ -30,7 +30,15 @@ BagExporter::BagExporter(const rclcpp::NodeOptions & options)
     return;
   }
 
-  // Declare and get the config_file parameter (absolute path)
+  // Get parameters
+  bag_path_ = this->declare_parameter<std::string>("rosbag", "/my/path/to/rosbag.mcap");
+
+  if (std::filesystem::is_directory(bag_path_)) {
+    RCLCPP_ERROR(this->get_logger(), "The provided path is a directory, not a file.");
+    rclcpp::shutdown();
+    return;
+  }
+
   std::string config_file = this->declare_parameter<std::string>(
     "config_file", package_share_directory + "/config/exporter_config.yaml");
 
@@ -61,7 +69,6 @@ void BagExporter::load_configuration(const std::string & config_file)
     RCLCPP_INFO(this->get_logger(), "Loading config from: %s", config_file.c_str());
 
     YAML::Node config = YAML::LoadFile(config_file);
-    bag_path_ = config["bag_path"].as<std::string>();
     output_dir_ = config["output_dir"].as<std::string>();
     storage_id_ = config["storage_id"].as<std::string>();
 
