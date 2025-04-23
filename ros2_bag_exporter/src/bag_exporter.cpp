@@ -42,6 +42,9 @@ BagExporter::BagExporter(const rclcpp::NodeOptions & options)
   std::string config_file = this->declare_parameter<std::string>(
     "config_file", package_share_directory + "/config/exporter_config.yaml");
 
+  // Use rosbag parent directory as base to save exported files
+  output_dir_ = std::filesystem::path(bag_path_).parent_path().string() + "/exported_data";
+
   // Load configuration
   load_configuration(config_file);
 
@@ -69,7 +72,6 @@ void BagExporter::load_configuration(const std::string & config_file)
     RCLCPP_INFO(this->get_logger(), "Loading config from: %s", config_file.c_str());
 
     YAML::Node config = YAML::LoadFile(config_file);
-    output_dir_ = config["output_dir"].as<std::string>();
     storage_id_ = config["storage_id"].as<std::string>();
 
     RCLCPP_INFO(

@@ -1,8 +1,5 @@
 # Configuration for processing ROS2 bag files
-# This file specifies the paths, storage format, and topics to extract from the ROS bag.
-
-# Directory where the exported data will be saved
-output_dir: "/path/to/output_directory"
+# This file specifies the storage format, and topics to extract from the ROS bag.
 
 # Storage format for the exported data. Options are "sqlite3" or "mcap"
 storage_id: "mcap"
