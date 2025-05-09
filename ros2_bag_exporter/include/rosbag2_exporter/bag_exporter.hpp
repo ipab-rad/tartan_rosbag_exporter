@@ -50,6 +50,8 @@ struct Handler
   size_t current_index;
 };
 
+namespace fs = std::filesystem;
+
 class BagExporter : public rclcpp::Node
 {
 public:
@@ -57,14 +59,14 @@ public:
 
 private:
   void load_configuration(const std::string & config_file);
-  void setup_handlers();
-  void export_bag();
-  void create_metadata_file();
+  void setup_handlers(const fs::path & output_directory_path);
+  void export_bag(const fs::path & rosbag);
+  void create_metadata_file(const fs::path & used_rosbag, const fs::path & output_directoy_path);
+  void process_rosbag_directory();
 
-  bool tf_extracted_;
-  bool all_cameras_info_extracted_;
-  std::string bag_path_;
-  std::string output_dir_;
+  size_t global_id_;
+  std::string rosbags_directory_;
+  std::string output_directory_;
   std::string storage_id_;
   std::string rosbag_base_name_;
   std::vector<TopicConfig> topics_;

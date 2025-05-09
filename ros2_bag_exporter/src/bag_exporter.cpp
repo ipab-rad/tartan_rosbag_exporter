@@ -18,7 +18,7 @@ namespace rosbag2_exporter
 {
 
 BagExporter::BagExporter(const rclcpp::NodeOptions & options)
-: Node("rosbag2_exporter", options), tf_extracted_(false), all_cameras_info_extracted_(false)
+: Node("rosbag2_exporter", options), global_id_(0)
 {
   // Find the package share directory
   std::string package_share_directory;
@@ -30,11 +30,14 @@ BagExporter::BagExporter(const rclcpp::NodeOptions & options)
     return;
   }
 
-  // Get parameters
-  bag_path_ = this->declare_parameter<std::string>("rosbag", "/my/path/to/rosbag.mcap");
+  rosbags_directory_ =
+    this->declare_parameter<std::string>("rosbags_directory", "/my/path/to/rosbags");
 
-  if (std::filesystem::is_directory(bag_path_)) {
-    RCLCPP_ERROR(this->get_logger(), "The provided path is a directory, not a file.");
+  output_directory_ =
+    this->declare_parameter<std::string>("output_directory", "/my/path/to/output");
+
+  if (!std::filesystem::is_directory(rosbags_directory_)) {
+    RCLCPP_ERROR(this->get_logger(), "%s is not a directory!", rosbags_directory_.c_str());
     rclcpp::shutdown();
     return;
   }
@@ -42,22 +45,11 @@ BagExporter::BagExporter(const rclcpp::NodeOptions & options)
   std::string config_file = this->declare_parameter<std::string>(
     "config_file", package_share_directory + "/config/exporter_config.yaml");
 
-  // Use rosbag parent directory as base to save exported files
-  output_dir_ = std::filesystem::path(bag_path_).parent_path().string() + "/exported_data";
-
-  // Load configuration
   load_configuration(config_file);
-
-  // Setup handlers based on topics
-  setup_handlers();
 
   auto start_time_point = std::chrono::high_resolution_clock::now();
 
-  // Start exporting
-  export_bag();
-
-  // Create Metadata
-  create_metadata_file();
+  process_rosbag_directory();
 
   auto end_time_point = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end_time_point - start_time_point;
@@ -73,9 +65,6 @@ void BagExporter::load_configuration(const std::string & config_file)
 
     YAML::Node config = YAML::LoadFile(config_file);
     storage_id_ = config["storage_id"].as<std::string>();
-
-    RCLCPP_INFO(
-      this->get_logger(), "Reading from:\n" MAGENTA_LOG "%s" COLOR_RESET, bag_path_.c_str());
 
     for (const auto & topic : config["topics"]) {
       TopicConfig tc;
@@ -119,14 +108,14 @@ void BagExporter::load_configuration(const std::string & config_file)
   }
 }
 
-void BagExporter::setup_handlers()
+void BagExporter::setup_handlers(const fs::path & output_directory_path)
 {
   // Extract base name from rosbag file
-  rosbag_base_name_ = std::filesystem::path(bag_path_).stem().string();
+  std::string output_directory = output_directory_path.string();
 
   for (const auto & topic : topics_) {
     // Create directory for each topic
-    std::string abs_topic_dir = output_dir_ + "/" + rosbag_base_name_ + "/" + topic.topic_dir;
+    std::string abs_topic_dir = output_directory + "/" + topic.topic_dir;
 
     // Ensure the directory exists, create if necessary
     if (!std::filesystem::exists(abs_topic_dir)) {
@@ -165,12 +154,12 @@ void BagExporter::setup_handlers()
     }
   }
 }
-void BagExporter::export_bag()
+void BagExporter::export_bag(const fs::path & rosbag)
 {
   // Initialize reader
   rosbag2_cpp::readers::SequentialReader reader;
   rosbag2_storage::StorageOptions storage_options;
-  storage_options.uri = bag_path_;
+  storage_options.uri = rosbag.string();
   storage_options.storage_id = storage_id_;
   rosbag2_cpp::ConverterOptions converter_options;
   converter_options.input_serialization_format = "cdr";
@@ -216,10 +205,10 @@ void BagExporter::export_bag()
 
   RCLCPP_INFO(this->get_logger(), "Extracting data ...");
 
-  // Global id counter
-  size_t global_id = 0;
-  // Camera info tracking
   size_t camera_info_extracted_n = 0;
+  bool all_cameras_info_extracted = false;
+  bool tf_extracted = false;
+
   // Read and process messages
   while (reader.has_next()) {
     auto serialized_msg = reader.read_next();
@@ -229,21 +218,21 @@ void BagExporter::export_bag()
     if (handler_it != handlers_.end() && handler_it->second.handler) {
       // Only process /tf_static once
       if (topic == "/tf_static") {
-        if (!tf_extracted_) {
+        if (!tf_extracted) {
           // Construct rclcpp::SerializedMessage from serialized_data
           rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
-          handlers_["/tf_static"].handler->process_message(ser_msg, global_id);
+          handlers_["/tf_static"].handler->process_message(ser_msg, global_id_);
           if (!handlers_["/tf_static"].handler->save_msg_to_file(0)) {
             throw std::runtime_error("Failed to save tf_static message to file");
           }
-          tf_extracted_ = true;
+          tf_extracted = true;
         }
 
-        global_id += 1;
+        global_id_ += 1;
         continue;
       }
 
-      if (!all_cameras_info_extracted_) {
+      if (!all_cameras_info_extracted) {
         // Find if the current topic is one of the camera's info
         auto cam_info_topic_it = std::find_if(
           cam_info_topics_.begin(), cam_info_topics_.end(),
@@ -254,7 +243,7 @@ void BagExporter::export_bag()
           auto cam_info_handler = handlers_[topic];
           rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
-          cam_info_handler.handler->process_message(ser_msg, global_id);
+          cam_info_handler.handler->process_message(ser_msg, global_id_);
           if (!cam_info_handler.handler->save_msg_to_file(0)) {
             throw std::runtime_error("Failed to save camera info message to file");
           }
@@ -266,11 +255,11 @@ void BagExporter::export_bag()
           // evaluate this topic again
           handler_it->second.handler.reset();
 
-          global_id += 1;
+          global_id_ += 1;
 
           // Check if we are done with all the camera info messages
           if (camera_info_extracted_n == cam_info_topics_.size()) {
-            all_cameras_info_extracted_ = true;
+            all_cameras_info_extracted = true;
           }
           continue;
         }
@@ -292,22 +281,24 @@ void BagExporter::export_bag()
           rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
           // Process the message
-          handler_it->second.handler->process_message(ser_msg, global_id);
+          handler_it->second.handler->process_message(ser_msg, global_id_);
         }
       } else {
         RCLCPP_WARN(this->get_logger(), "No configuration found for topic: %s", topic.c_str());
       }
 
       handler_it->second.current_index++;
-      global_id++;
+      global_id_++;
 
       // Log progress
-      print_progress(static_cast<int>(std::round((global_id * 100.0) / total_bag_messages)));
+      utils::print_progress(
+        static_cast<int>(std::round((global_id_ * 100.0) / total_bag_messages)));
     }
   }
 }
 
-void BagExporter::create_metadata_file()
+void BagExporter::create_metadata_file(
+  const fs::path & used_rosbag, const fs::path & output_directoy_path)
 {
   // YAML C++ preserves list order, so topics_[0] corresponds to
   // the first sensor defined in the YAML file, used as the time sync reference.
@@ -324,7 +315,7 @@ void BagExporter::create_metadata_file()
 
   // Save which rosbag was used to extract the data
   root["rosbags"] = YAML::Node(YAML::NodeType::Sequence);
-  root["rosbags"].push_back(std::filesystem::path(bag_path_).filename().string());
+  root["rosbags"].push_back(used_rosbag.filename().string());
 
   size_t sync_group_id = 0;
   size_t total_sync_groups = main_sensor_handler->data_meta_vec_.size();
@@ -337,7 +328,7 @@ void BagExporter::create_metadata_file()
     sync_group["id"] = sync_group_id;
     sync_group["stamp"]["sec"] = main_data_meta.timestamp.sec;
     sync_group["stamp"]["nanosec"] = main_data_meta.timestamp.nanosec;
-    sync_group["lidar"]["global_id"] = main_data_meta.global_id;
+    sync_group["lidar"]["global_id_"] = main_data_meta.global_id;
 
     // Save this pointcloud
     if (!main_sensor_handler->save_msg_to_file(idx)) {
@@ -347,11 +338,8 @@ void BagExporter::create_metadata_file()
     }
 
     // Save file name relative to rosbag_base_name_
-    std::string abs_path_prefix = output_dir_ + "/" + rosbag_base_name_ + "/";
-    if (main_data_meta.data_path.find(abs_path_prefix) == 0) {
-      main_data_meta.data_path.erase(0, abs_path_prefix.length());
-    }
-    sync_group["lidar"]["file"] = main_data_meta.data_path;
+    fs::path lidar_relative_path = fs::relative(main_data_meta.data_path, output_directoy_path);
+    sync_group["lidar"]["file"] = lidar_relative_path.string();
 
     auto & curr_lidar_time = main_data_meta.timestamp;
 
@@ -370,26 +358,24 @@ void BagExporter::create_metadata_file()
       auto & curr_cam_handler = handlers_[topics_[k].name].handler;
       auto & current_meta_data_vec = curr_cam_handler->data_meta_vec_;
       size_t closest_time_index =
-        find_closest_timestamp(current_meta_data_vec, curr_lidar_time, msg_index[k]);
+        utils::find_closest_timestamp(current_meta_data_vec, curr_lidar_time, msg_index[k]);
 
       // Create YAML metadata based on the found time index
       auto current_cam_meta = current_meta_data_vec[closest_time_index];
       YAML::Node cam;
-      cam["global_id"] = current_cam_meta.global_id;
-      cam["name"] = get_cam_name(topics_[k].name);
+      cam["global_id_"] = current_cam_meta.global_id;
+      cam["name"] = utils::get_cam_name(topics_[k].name);
 
       // Save this image
       if (!curr_cam_handler->save_msg_to_file(closest_time_index)) {
         throw std::runtime_error(
-          "Unable to save image msg as file, global_id: " +
+          "Unable to save image msg as file, global_id_: " +
           std::to_string(main_data_meta.global_id));
       }
 
-      // Save file name relative to rosbag_base_name_
-      if (current_cam_meta.data_path.find(abs_path_prefix) == 0) {
-        current_cam_meta.data_path.erase(0, abs_path_prefix.length());
-      }
-      cam["file"] = current_cam_meta.data_path;
+      // Save file name relative to the output directory path
+      fs::path cam_relative_path = fs::relative(current_cam_meta.data_path, output_directoy_path);
+      cam["file"] = cam_relative_path.string();
 
       cameras.push_back(cam);
     }
@@ -401,18 +387,55 @@ void BagExporter::create_metadata_file()
     ++sync_group_id;
 
     // Log progress
-    print_progress(static_cast<int>(std::round((sync_group_id * 100.0) / total_sync_groups)));
+    utils::print_progress(
+      static_cast<int>(std::round((sync_group_id * 100.0) / total_sync_groups)));
   }
 
   // Save the file in the rosbag output directory
-  std::string yaml_path = output_dir_ + "/" + rosbag_base_name_ + "/" + "export_metadata.yaml";
-  std::ofstream yaml_file(yaml_path);
+  fs::path yaml_path = output_directoy_path / std::string("export_metadata.yaml");
+  std::ofstream yaml_file(yaml_path.string());
   yaml_file << root;
   yaml_file.close();
+}
+
+void BagExporter::process_rosbag_directory()
+{
+  RCLCPP_INFO(
+    this->get_logger(), "Processing: " MAGENTA_LOG "%s" COLOR_RESET, rosbags_directory_.c_str());
+
+  // Get all the rosbags files
+  auto rosbag_directory_path = std::filesystem::path(rosbags_directory_);
+  auto rosbags_files = utils::find_rosbags(rosbag_directory_path);
+
+  // Create a new directory for the output
+  std::string new_rosbag_directory_name = utils::get_new_name(rosbag_directory_path);
+  fs::path new_output_dir = fs::path(output_directory_) / new_rosbag_directory_name;
+  fs::create_directories(new_output_dir);
 
   RCLCPP_INFO(
-    this->get_logger(), "🚀 Metadata file created in:\n" CYAN_LOG "%s" COLOR_RESET,
-    yaml_path.c_str());
+    this->get_logger(), "Found " UNDERLINE_LOG "%zu" COLOR_RESET " rosbags in the directory",
+    rosbags_files.size());
+
+  for (const auto & rosbag : rosbags_files) {
+    RCLCPP_INFO(
+      this->get_logger(), "Processing rosbag: " CYAN_LOG "%s" COLOR_RESET,
+      rosbag.filename().string().c_str());
+
+    // Extract base name from rosbag file
+    size_t rosbag_index = utils::get_rosbag_index(rosbag);
+    fs::path split_export_directory =
+      new_output_dir / std::string("sequence_" + std::to_string(rosbag_index));
+
+    setup_handlers(split_export_directory);
+
+    export_bag(rosbag);
+
+    create_metadata_file(rosbag, split_export_directory);
+  }
+
+  RCLCPP_INFO(
+    this->get_logger(), "🚀 Data exported in: " GREEN_LOG "%s" COLOR_RESET,
+    new_output_dir.string().c_str());
 }
 
 }  // namespace rosbag2_exporter
