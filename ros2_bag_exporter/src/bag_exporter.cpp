@@ -208,6 +208,7 @@ void BagExporter::extract_data(const fs::path & rosbag)
   size_t camera_info_extracted_n = 0;
   bool all_cameras_info_extracted = false;
   bool tf_extracted = false;
+  int progress = 0;
 
   // Read and process messages
   while (reader.has_next()) {
@@ -229,6 +230,7 @@ void BagExporter::extract_data(const fs::path & rosbag)
         }
 
         global_id_ += 1;
+        progress++;
         continue;
       }
 
@@ -256,6 +258,7 @@ void BagExporter::extract_data(const fs::path & rosbag)
           handler_it->second.handler.reset();
 
           global_id_ += 1;
+          progress++;
 
           // Check if we are done with all the camera info messages
           if (camera_info_extracted_n == cam_info_topics_.size()) {
@@ -289,16 +292,15 @@ void BagExporter::extract_data(const fs::path & rosbag)
 
       handler_it->second.current_index++;
       global_id_++;
+      progress++;
 
       // Log progress
-      utils::print_progress(
-        static_cast<int>(std::round((global_id_ * 100.0) / total_bag_messages)));
+      utils::print_progress(static_cast<int>(std::round((progress * 100.0) / total_bag_messages)));
     }
   }
 }
 
-void BagExporter::export_data(
-  const fs::path & used_rosbag, const fs::path & output_directoy_path)
+void BagExporter::export_data(const fs::path & used_rosbag, const fs::path & output_directoy_path)
 {
   // YAML C++ preserves list order, so topics_[0] corresponds to
   // the first sensor defined in the YAML file, used as the time sync reference.
