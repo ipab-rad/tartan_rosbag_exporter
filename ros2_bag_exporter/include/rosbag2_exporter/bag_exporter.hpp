@@ -60,8 +60,8 @@ public:
 private:
   void load_configuration(const std::string & config_file);
   void setup_handlers(const fs::path & output_directory_path);
-  void export_bag(const fs::path & rosbag);
-  void create_metadata_file(const fs::path & used_rosbag, const fs::path & output_directoy_path);
+  void extract_data(const fs::path & rosbag);
+  void export_data(const fs::path & used_rosbag, const fs::path & output_directoy_path);
   void process_rosbag_directory();
 
   size_t global_id_;

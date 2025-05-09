@@ -154,7 +154,7 @@ void BagExporter::setup_handlers(const fs::path & output_directory_path)
     }
   }
 }
-void BagExporter::export_bag(const fs::path & rosbag)
+void BagExporter::extract_data(const fs::path & rosbag)
 {
   // Initialize reader
   rosbag2_cpp::readers::SequentialReader reader;
@@ -297,7 +297,7 @@ void BagExporter::export_bag(const fs::path & rosbag)
   }
 }
 
-void BagExporter::create_metadata_file(
+void BagExporter::export_data(
   const fs::path & used_rosbag, const fs::path & output_directoy_path)
 {
   // YAML C++ preserves list order, so topics_[0] corresponds to
@@ -428,9 +428,9 @@ void BagExporter::process_rosbag_directory()
 
     setup_handlers(split_export_directory);
 
-    export_bag(rosbag);
+    extract_data(rosbag);
 
-    create_metadata_file(rosbag, split_export_directory);
+    export_data(rosbag, split_export_directory);
   }
 
   RCLCPP_INFO(
