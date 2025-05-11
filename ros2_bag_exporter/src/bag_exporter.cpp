@@ -20,91 +20,52 @@ namespace rosbag2_exporter
 BagExporter::BagExporter(const rclcpp::NodeOptions & options)
 : Node("rosbag2_exporter", options), global_id_(0)
 {
-  // Find the package share directory
-  std::string package_share_directory;
-  try {
-    package_share_directory = ament_index_cpp::get_package_share_directory("ros2_bag_exporter");
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Package share directory not found: %s", e.what());
-    rclcpp::shutdown();
-    return;
-  }
-
   rosbags_directory_ =
     this->declare_parameter<std::string>("rosbags_directory", "/my/path/to/rosbags");
 
   output_directory_ =
     this->declare_parameter<std::string>("output_directory", "/my/path/to/output");
 
-  if (!std::filesystem::is_directory(rosbags_directory_)) {
-    RCLCPP_ERROR(this->get_logger(), "%s is not a directory!", rosbags_directory_.c_str());
-    rclcpp::shutdown();
-    return;
-  }
-
-  std::string config_file = this->declare_parameter<std::string>(
-    "config_file", package_share_directory + "/config/exporter_config.yaml");
-
-  load_configuration(config_file);
-
-  auto start_time_point = std::chrono::high_resolution_clock::now();
-
-  process_rosbag_directory();
-
-  auto end_time_point = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> duration = end_time_point - start_time_point;
-  double elapsed_time = duration.count();
-
-  RCLCPP_INFO(this->get_logger(), "Sensor data exportation took %f secs 🔥", elapsed_time);
+  config_file_ =
+    this->declare_parameter<std::string>("config_file", "/my/path/exporter_config.yaml");
 }
 
-void BagExporter::load_configuration(const std::string & config_file)
+void BagExporter::load_configuration()
 {
-  try {
-    RCLCPP_INFO(this->get_logger(), "Loading config from: %s", config_file.c_str());
+  RCLCPP_INFO(this->get_logger(), "Loading config from: %s", config_file_.c_str());
 
-    YAML::Node config = YAML::LoadFile(config_file);
-    storage_id_ = config["storage_id"].as<std::string>();
+  YAML::Node config = YAML::LoadFile(config_file_);
+  storage_id_ = config["storage_id"].as<std::string>();
 
-    for (const auto & topic : config["topics"]) {
-      TopicConfig tc;
-      tc.name = topic["name"].as<std::string>();
-      std::string type = topic["type"].as<std::string>();
-      tc.topic_dir = topic["topic_dir"].as<std::string>();
+  for (const auto & topic : config["topics"]) {
+    TopicConfig tc;
+    tc.name = topic["name"].as<std::string>();
+    std::string type = topic["type"].as<std::string>();
+    tc.topic_dir = topic["topic_dir"].as<std::string>();
 
-      tc.sample_interval = topic["sample_interval"] ? topic["sample_interval"].as<int>()
-                                                    : 1;  // Default to 1 (write every message)
+    tc.sample_interval = topic["sample_interval"] ? topic["sample_interval"].as<int>() : 1;
 
-      if (type == "PointCloud2") {
-        tc.type = MessageType::PointCloud2;
-      } else if (type == "Image") {
-        tc.type = MessageType::Image;
-        tc.encoding =
-          topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8";  // default encoding
-      } else if (type == "CompressedImage") {
-        tc.type = MessageType::CompressedImage;
-        tc.encoding =
-          topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8";  // default encoding
-      } else if (type == "CameraInfo") {
-        tc.type = MessageType::CameraInfo;
-      } else if (type == "IMU") {
-        tc.type = MessageType::IMU;
-      } else if (type == "GPS") {
-        tc.type = MessageType::GPS;
-      } else if (type == "TF") {
-        tc.type = MessageType::TF;
-      } else {
-        tc.type = MessageType::Unknown;
-      }
-
-      topics_.push_back(tc);
+    if (type == "PointCloud2") {
+      tc.type = MessageType::PointCloud2;
+    } else if (type == "Image") {
+      tc.type = MessageType::Image;
+      tc.encoding = topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8";
+    } else if (type == "CompressedImage") {
+      tc.type = MessageType::CompressedImage;
+      tc.encoding = topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8";
+    } else if (type == "CameraInfo") {
+      tc.type = MessageType::CameraInfo;
+    } else if (type == "IMU") {
+      tc.type = MessageType::IMU;
+    } else if (type == "GPS") {
+      tc.type = MessageType::GPS;
+    } else if (type == "TF") {
+      tc.type = MessageType::TF;
+    } else {
+      tc.type = MessageType::Unknown;
     }
-  } catch (const YAML::BadFile & e) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to load configuration: %s", e.what());
-    rclcpp::shutdown();
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "An error occurred while loading configuration: %s", e.what());
-    rclcpp::shutdown();
+
+    topics_.push_back(tc);
   }
 }
 
@@ -168,9 +129,7 @@ void BagExporter::extract_data(const fs::path & rosbag)
   try {
     reader.open(storage_options, converter_options);
   } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to open bag: %s", e.what());
-    rclcpp::shutdown();
-    return;
+    throw std::runtime_error("Failed to open rosbag : " + rosbag.string() + ", error: " + e.what());
   }
 
   // Get topic metadata
@@ -440,12 +399,47 @@ void BagExporter::process_rosbag_directory()
     new_output_dir.string().c_str());
 }
 
+bool BagExporter::run()
+{
+  try {
+    if (!std::filesystem::is_directory(rosbags_directory_)) {
+      throw std::runtime_error(rosbags_directory_ + " is not a directory!");
+    }
+
+    load_configuration();
+
+    auto start_time_point = std::chrono::high_resolution_clock::now();
+
+    process_rosbag_directory();
+
+    auto end_time_point = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end_time_point - start_time_point;
+    double elapsed_time = duration.count();
+
+    RCLCPP_INFO(this->get_logger(), "Sensor data exportation took %f secs 🔥", elapsed_time);
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Error: %s", e.what());
+    return false;
+  }
+}
+
 }  // namespace rosbag2_exporter
 
 // Define the main function to initialize and run the node
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
+
   auto exporter = std::make_shared<rosbag2_exporter::BagExporter>(rclcpp::NodeOptions());
-  return 0;
+
+  bool success = exporter->run();
+
+  rclcpp::shutdown();
+
+  if (success) {
+    return 0;
+  } else {
+    return 1;
+  }
 }

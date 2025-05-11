@@ -56,9 +56,10 @@ class BagExporter : public rclcpp::Node
 {
 public:
   explicit BagExporter(const rclcpp::NodeOptions & options);
+  bool run();
 
 private:
-  void load_configuration(const std::string & config_file);
+  void load_configuration();
   void setup_handlers(const fs::path & output_directory_path);
   void extract_data(const fs::path & rosbag);
   void export_data(const fs::path & used_rosbag, const fs::path & output_directoy_path);
@@ -67,6 +68,7 @@ private:
   size_t global_id_;
   std::string rosbags_directory_;
   std::string output_directory_;
+  std::string config_file_;
   std::string storage_id_;
   std::string rosbag_base_name_;
   std::vector<TopicConfig> topics_;
