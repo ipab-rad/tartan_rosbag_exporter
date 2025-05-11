@@ -56,7 +56,6 @@ The behavior of `ros2_bag_exporter` is controlled via a YAML configuration file.
 
 #### Configuration File Structure
 ```yaml
-output_dir: "/absolute/path/to/output/directory"
 storage_id: "mcap"  # Common storage ID; ensure it matches your bag's storage format
 topics:
   - name: "/camera/color/image_raw"
@@ -93,9 +92,7 @@ topics:
 <!-- - `bag_path`: The absolute path to the ROS 2 bag file you wish to export. -->
 
 #### Parameter Descriptions
-- `output_dir`: The absolute path to the directory where exported files will be saved.
 - `storage_id`: Specifies the storage format of the bag file. Common values include:
-  - `sqlite3`: Default storage for ROS 2 bags.
   - `mcap`: For MCAP storage format.
 - `topics`: A list of topics to export. Each topic requires:
   - `name`: The ROS 2 topic name.
@@ -106,15 +103,19 @@ topics:
 ### Run
 After building and sourcing the workspace, run the `bag_exporter` node using the following command:
 ```bash
-ros2 run ros2_bag_exporter bag_exporter --ros-args -p rosbag:=<path_to_rosbag.mcap> -p config_file:=<path_to_config>
+ros2 run ros2_bag_exporter bag_exporter --ros-args \
+  -p rosbags_directory:=<path_to_rosbags> \
+  -p output_directory:=<path_to_output> \
+  -p config_file:=<path_to_config>
 ```
 #### Command-Line Arguments
-- `rosbag`: The path to the ROS 2 bag file you wish to export. Only `.mcap` format is supported.
-- `config_file`: Specify a custom path to the YAML configuration file.
+- `rosbags_directory`: Path of the directory containing the rosbag splits. Only `.mcap` format is supported.
+- `output_directory`: Path of the directory where the exportation will be saved.
+- `config_file`: Path to the YAML configuration file.
 
 ### Output
 
-The extractor will generate an `export_metadata.yaml` file inside the `<output_dir>/<bag_name>` directory.
+The extractor will generate an `export_metadata.yaml` file inside the `<output_directory>/<bag_name>` directory.
 
 This metadata file provides details about synchronisation between camera images and point clouds, organised into a list of `sync_groups`. Additionally, the names of the original rosbags used will be saved under the `rosbags` field.
 
