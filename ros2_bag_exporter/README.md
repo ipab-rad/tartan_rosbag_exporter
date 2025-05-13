@@ -89,8 +89,6 @@ topics:
     topic_dir: "transforms"
 ```
 
-<!-- - `bag_path`: The absolute path to the ROS 2 bag file you wish to export. -->
-
 #### Parameter Descriptions
 - `storage_id`: Specifies the storage format of the bag file. Common values include:
   - `mcap`: For MCAP storage format.

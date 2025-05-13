@@ -155,7 +155,7 @@ void BagExporter::extract_data(const fs::path & rosbag)
 
       // Only one camera info message will be saved per topic
       if (cam_info_topic_it != cam_info_topics_.end()) {
-        total_bag_messages += 1;
+        ++total_bag_messages;
       } else {
         total_bag_messages += it->message_count;
       }
@@ -188,8 +188,8 @@ void BagExporter::extract_data(const fs::path & rosbag)
           tf_extracted = true;
         }
 
-        global_id_ += 1;
-        progress++;
+        ++global_id_;
+        ++progress;
         continue;
       }
 
@@ -210,14 +210,14 @@ void BagExporter::extract_data(const fs::path & rosbag)
           }
 
           // Increase counter
-          camera_info_extracted_n += 1;
+          ++camera_info_extracted_n;
 
           // Remove this camera info handler so we do not
           // evaluate this topic again
           handler_it->second.handler.reset();
 
-          global_id_ += 1;
-          progress++;
+          ++global_id_;
+          ++progress;
 
           // Check if we are done with all the camera info messages
           if (camera_info_extracted_n == cam_info_topics_.size()) {
@@ -249,9 +249,9 @@ void BagExporter::extract_data(const fs::path & rosbag)
         RCLCPP_WARN(this->get_logger(), "No configuration found for topic: %s", topic.c_str());
       }
 
-      handler_it->second.current_index++;
-      global_id_++;
-      progress++;
+      ++handler_it->second.current_index;
+      ++global_id_;
+      ++progress;
 
       // Log progress
       utils::print_progress(static_cast<int>(std::round((progress * 100.0) / total_bag_messages)));
@@ -289,7 +289,7 @@ void BagExporter::export_data(const fs::path & used_rosbag, const fs::path & out
     sync_group["id"] = sync_group_id;
     sync_group["stamp"]["sec"] = main_data_meta.timestamp.sec;
     sync_group["stamp"]["nanosec"] = main_data_meta.timestamp.nanosec;
-    sync_group["lidar"]["global_id_"] = main_data_meta.global_id;
+    sync_group["lidar"]["global_id"] = main_data_meta.global_id;
 
     // Save this pointcloud
     if (!main_sensor_handler->save_msg_to_file(idx)) {
@@ -308,7 +308,7 @@ void BagExporter::export_data(const fs::path & used_rosbag, const fs::path & out
     YAML::Node cameras;
 
     // Find closest timestamp for each camera
-    for (int k = 0; k < topics_.size(); k++) {
+    for (int k = 0; k < topics_.size(); ++k) {
       // Only process camera messages
       if (
         topics_[k].type != MessageType::Image && topics_[k].type != MessageType::CompressedImage) {
@@ -324,13 +324,13 @@ void BagExporter::export_data(const fs::path & used_rosbag, const fs::path & out
       // Create YAML metadata based on the found time index
       auto current_cam_meta = current_meta_data_vec[closest_time_index];
       YAML::Node cam;
-      cam["global_id_"] = current_cam_meta.global_id;
+      cam["global_id"] = current_cam_meta.global_id;
       cam["name"] = utils::get_cam_name(topics_[k].name);
 
       // Save this image
       if (!curr_cam_handler->save_msg_to_file(closest_time_index)) {
         throw std::runtime_error(
-          "Unable to save image msg as file, global_id_: " +
+          "Unable to save image msg as file, global_id: " +
           std::to_string(main_data_meta.global_id));
       }
 

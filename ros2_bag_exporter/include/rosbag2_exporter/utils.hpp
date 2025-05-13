@@ -84,9 +84,13 @@ void print_progress(int percentage)
   static int last_percentage = -1;
 
   // Never exceeds 100%
-  if (percentage > 100) percentage = 100;
+  if (percentage > 100) {
+    percentage = 100;
+  }
   // Prevent duplicate prints
-  if (percentage == last_percentage) return;
+  if (percentage == last_percentage) {
+    return;
+  }
 
   last_percentage = percentage;
 
@@ -95,18 +99,21 @@ void print_progress(int percentage)
 
   std::cout << "\r\t\t\t\t\t\t [";
   for (int i = 0; i < width; ++i) {
-    if (i < pos)
+    if (i < pos) {
       std::cout << "=";
-    else if (i == pos)
+    } else if (i == pos) {
       std::cout << ">";
-    else
+    } else {
       std::cout << " ";
+    }
   }
 
   std::cout << "] " << percentage << "%" << std::flush;
 
   // Print a newline once at 100%
-  if (percentage >= 100) std::cout << std::endl;
+  if (percentage >= 100) {
+    std::cout << std::endl;
+  }
 }
 
 /**
@@ -120,23 +127,26 @@ void print_progress(int percentage)
  */
 std::vector<fs::path> find_rosbags(const fs::path & rosbag_directory)
 {
-  if (!fs::is_directory(rosbag_directory)) return {};
-
   std::regex pattern(R"(.*_(\d+)\.mcap)");
   std::vector<std::pair<int, fs::path>> indexed;
 
   for (const auto & entry : fs::directory_iterator(rosbag_directory)) {
-    if (!entry.is_regular_file()) continue;
+    if (!entry.is_regular_file()) {
+      continue;
+    }
     std::smatch match;
     std::string name = entry.path().filename().string();
-    if (std::regex_match(name, match, pattern))
+    if (std::regex_match(name, match, pattern)) {
       indexed.emplace_back(std::stoi(match[1]), entry.path());
+    }
   }
 
   std::sort(indexed.begin(), indexed.end());
 
   std::vector<fs::path> sorted;
-  for (auto & [_, path] : indexed) sorted.push_back(path);
+  for (auto & [_, path] : indexed) {
+    sorted.push_back(path);
+  }
   return sorted;
 }
 
