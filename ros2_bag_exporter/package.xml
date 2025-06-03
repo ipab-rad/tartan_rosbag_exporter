@@ -4,7 +4,9 @@
   <version>0.0.1</version>
   <description>ROS 2 Bag Exporter Package</description>
 
-  <maintainer email="abdalrahman.m5959@gmail.com">Geekgineer</maintainer>
+  <maintainer email="hcruzgo@ed.ac.uk">Hector Cruz</maintainer>
+  <maintainer email="alex.bordallo@ed.ac.uk">Alejandro Bordallo</maintainer>
+
   <license>Apache License 2.0</license>
 
   <!-- Build dependencies -->
