@@ -2,8 +2,8 @@
 Changelog for package ros2_bag_exporter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.0 (2025-06-03)
+------------------
 * Add multiple rosbag extraction support (`#12 <https://github.com/ipab-rad/tartan_rosbag_exporter/issues/12>`_)
   - Change `rosbag` param to `rosbags_directory` to explicitly
   mention that the input should be a directory
