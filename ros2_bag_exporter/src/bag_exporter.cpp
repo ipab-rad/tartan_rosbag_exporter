@@ -394,9 +394,7 @@ void BagExporter::process_rosbag_directory()
     export_data(rosbag, split_export_directory);
   }
 
-  RCLCPP_INFO(
-    this->get_logger(), "🚀 Data exported in: " GREEN_LOG "%s" COLOR_RESET,
-    new_output_dir.string().c_str());
+  RCLCPP_INFO(this->get_logger(), "🚀 Data exported in: %s", new_output_dir.string().c_str());
 }
 
 bool BagExporter::run()
