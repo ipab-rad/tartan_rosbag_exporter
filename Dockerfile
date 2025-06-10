@@ -49,8 +49,8 @@ ENV RCUTILS_COLORIZED_OUTPUT=1
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /etc/bash.bashrc
 
 # Create username
-ARG USER_ID
-ARG GROUP_ID
+ARG USER_ID=1000
+ARG GROUP_ID=1000
 ARG USERNAME=rosbag_exporter
 
 RUN groupadd -g $GROUP_ID $USERNAME && \
