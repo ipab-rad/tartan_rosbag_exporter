@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <map>
 #include <sstream>
 #include <string>
 
@@ -40,23 +41,32 @@ public:
     rclcpp::Serialization<tf2_msgs::msg::TFMessage> serializer;
     serializer.deserialize_message(&serialized_msg, &tf_msg);
 
-    // Parse this message into yaml dictionary
-    create_yaml(tf_msg);
-
-    // Create the full file path with '.csv' as the extension
-    std::string filepath = topic_dir_ + "/transforms" + ".yaml";
-
-    data_meta_ = DataMeta{filepath, builtin_interfaces::msg::Time(), global_id};
+    // Save transforms count in the TF message
+    size_t transformations_count = tf_msg.transforms.size();
+    tranformations_count_map_.insert({transformations_count, tf_msg});
   }
 
   bool save_msg_to_file([[maybe_unused]] size_t index) override
   {
-    // Emit (serialize) to string
-    YAML::Emitter out;
-    out << yaml_root_;
+    if (tranformations_count_map_.empty()) {
+      // Nothing to save
+      return false;
+    }
 
-    // Write to file if desired
-    std::ofstream fout(data_meta_.data_path);
+    // Get the Tf2 message that contains the highest
+    // number of transformations and create the YAML structure from it
+    auto tf_msg_map_element = tranformations_count_map_.rbegin();
+    YAML::Node yaml_root = create_yaml(tf_msg_map_element->second);
+
+    // Serialise the YAML node to a string
+    YAML::Emitter out;
+    out << yaml_root;
+
+    // Create the full file path with '.yaml' as the extension
+    std::string filepath = topic_dir_ + "/transforms" + ".yaml";
+
+    // Write to file
+    std::ofstream fout(filepath);
     fout << out.c_str();
     fout.close();
 
@@ -64,9 +74,9 @@ public:
   }
 
 private:
-  void create_yaml(const tf2_msgs::msg::TFMessage & tf2_msg)
+  YAML::Node create_yaml(const tf2_msgs::msg::TFMessage & tf2_msg)
   {
-    // Create a node for the sequence
+    YAML::Node yaml_root;
     YAML::Node transforms(YAML::NodeType::Sequence);
 
     // Parse all the TFs
@@ -84,16 +94,16 @@ private:
       transforms.push_back(tf_node);
     }
 
-    // Save the tf sequence in a top-level "transforms" key
-    yaml_root_["transforms"] = transforms;
+    // Save the tf sequence in a top-level "transforms" key in YAML root
+    yaml_root["transforms"] = transforms;
+
+    return yaml_root;
   }
 
 private:
   std::string topic_dir_;
 
-  DataMeta data_meta_;
-
-  YAML::Node yaml_root_;
+  std::map<size_t, tf2_msgs::msg::TFMessage> tranformations_count_map_;
 };
 
 }  // namespace rosbag2_exporter

@@ -47,5 +47,5 @@ topics:
   # Configuration for the TF topic (exported only once)
   - name: "/tf_static"          # Name of the topic to extract
     type: "TF"                  # Data type of the topic
-    sample_interval: 0          # Not used for this type
+    sample_interval: 1          # Process every message
     topic_dir: "extrinsics"     # Output data in <output_dir>/<bag_name>/extrinsics
