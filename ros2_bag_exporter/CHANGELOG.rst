@@ -2,6 +2,27 @@
 Changelog for package ros2_bag_exporter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Export the tf message with the most transforms. (`#19 <https://github.com/ipab-rad/tartan_rosbag_exporter/issues/19>`_)
+  - Fix extracting the wrong tf_static message if multiple and different
+  are present in the bag file. This assumes that the most relevant
+  tf_static message is the one with the most transforms. `#17 <https://github.com/ipab-rad/tartan_rosbag_exporter/issues/17>`_
+  - Modify `TFHandler` to:
+  - Save each `TFMessage` with its associated
+  transformation count in a sorted map when `process_message()`
+  is called
+  - Get the `TFMessage` with the most transforms from the sorted map
+  when `save_msg_to_file()` is called
+  - Modify `BagExporter` to:
+  - Call the TF's handler `save_msg_to_file()` method in `export_bag()`
+  if a `TFHandler` was registered
+  - Remove old tf extraction logic in `export_bag()`
+  - Ensure `sample_interval` is not zero for `TF` in `export_config.yaml`
+  to avoid zero division errors.
+  - Update README to clarify this behaviour.
+* Contributors: Hector Cruz
+
 1.0.0 (2025-06-03)
 ------------------
 * Add multiple rosbag extraction support (`#12 <https://github.com/ipab-rad/tartan_rosbag_exporter/issues/12>`_)
