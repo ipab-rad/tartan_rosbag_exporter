@@ -2,8 +2,8 @@
 Changelog for package ros2_bag_exporter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.0 (2025-07-01)
+------------------
 * Export the tf message with the most transforms. (`#19 <https://github.com/ipab-rad/tartan_rosbag_exporter/issues/19>`_)
   - Fix extracting the wrong tf_static message if multiple and different
   are present in the bag file. This assumes that the most relevant
