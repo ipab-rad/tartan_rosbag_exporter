@@ -176,23 +176,6 @@ void BagExporter::extract_data(const fs::path & rosbag)
 
     auto handler_it = handlers_.find(topic);
     if (handler_it != handlers_.end() && handler_it->second.handler) {
-      // Only process /tf_static once
-      if (topic == "/tf_static") {
-        if (!tf_extracted) {
-          // Construct rclcpp::SerializedMessage from serialized_data
-          rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
-          handlers_["/tf_static"].handler->process_message(ser_msg, global_id_);
-          if (!handlers_["/tf_static"].handler->save_msg_to_file(0)) {
-            throw std::runtime_error("Failed to save tf_static message to file");
-          }
-          tf_extracted = true;
-        }
-
-        ++global_id_;
-        ++progress;
-        continue;
-      }
-
       if (!all_cameras_info_extracted) {
         // Find if the current topic is one of the camera's info
         auto cam_info_topic_it = std::find_if(
@@ -205,6 +188,9 @@ void BagExporter::extract_data(const fs::path & rosbag)
           rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
           cam_info_handler.handler->process_message(ser_msg, global_id_);
+          // TODO(hector): CameraInfoHandler doesn’t track message indices, as it’s meant to
+          //       export only one. Index 0 is passed because save_msg_to_file requires it.
+          //       This should be addressed in #21.
           if (!cam_info_handler.handler->save_msg_to_file(0)) {
             throw std::runtime_error("Failed to save camera info message to file");
           }
@@ -350,6 +336,16 @@ void BagExporter::export_data(const fs::path & used_rosbag, const fs::path & out
     // Log progress
     utils::print_progress(
       static_cast<int>(std::round((sync_group_id * 100.0) / total_sync_groups)));
+  }
+
+  // Export tf_static if we have extracted it
+  if (handlers_.find("/tf_static") != handlers_.end() && handlers_["/tf_static"].handler) {
+    if (!handlers_["/tf_static"].handler->save_msg_to_file(0)) {
+      // TODO(hector): TFHandler doesn’t track message indices, as it’s meant to
+      //       export only one. Index 0 is passed because save_msg_to_file requires it.
+      //       This should be addressed in #21.
+      throw std::runtime_error("Unable to save tf_static message to a file ");
+    }
   }
 
   // Save the file in the rosbag output directory

@@ -85,7 +85,7 @@ topics:
     topic_dir: "lidar"
   - name: "/tf_static"
     type: "TF"
-    sample_interval: 0   # Not used for this type
+    sample_interval: 1   # Process every message
     topic_dir: "transforms"
 ```
 
@@ -96,6 +96,8 @@ topics:
   - `name`: The ROS 2 topic name.
   - `type`: The message type (`PointCloud2`, `Image`, `CompressedImage`,`CameraInfo`,`IMU`, `GPS` and `TF`).
   - `sample_interval`: The interval at which messages will be exported (e.g., 1 for every 2 messages).
+    - For the`TF` type, this works a bit differently: every `sample_interval` message is processed, but only the
+      one containing the most transforms will be exported (see [#19](https://github.com/ipab-rad/tartan_rosbag_exporter/issues/17)).
   - `topic_dir`: The name of the directory where the sensor data from the topic will be saved. The directory is created in `<output_dir>/<bag_name>/`.
 
 ### Run
