@@ -188,6 +188,9 @@ void BagExporter::extract_data(const fs::path & rosbag)
           rclcpp::SerializedMessage ser_msg(*serialized_msg->serialized_data);
 
           cam_info_handler.handler->process_message(ser_msg, global_id_);
+          // TODO(hector): CameraInfoHandler doesn’t track message indices, as it’s meant to
+          //       export only one. Index 0 is passed because save_msg_to_file requires it.
+          //       This should be addressed in #21.
           if (!cam_info_handler.handler->save_msg_to_file(0)) {
             throw std::runtime_error("Failed to save camera info message to file");
           }
@@ -338,6 +341,9 @@ void BagExporter::export_data(const fs::path & used_rosbag, const fs::path & out
   // Export tf_static if we have extracted it
   if (handlers_.find("/tf_static") != handlers_.end() && handlers_["/tf_static"].handler) {
     if (!handlers_["/tf_static"].handler->save_msg_to_file(0)) {
+      // TODO(hector): TFHandler doesn’t track message indices, as it’s meant to
+      //       export only one. Index 0 is passed because save_msg_to_file requires it.
+      //       This should be addressed in #21.
       throw std::runtime_error("Unable to save tf_static message to a file ");
     }
   }

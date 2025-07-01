@@ -53,10 +53,10 @@ public:
       return false;
     }
 
-    // Get the Tf2 message that contains the highest
-    // number of transformations and create the YAML structure from it
-    auto tf_msg_map_element = tranformations_count_map_.rbegin();
-    YAML::Node yaml_root = create_yaml(tf_msg_map_element->second);
+    // Get the map pair with the TF message containing the most transformations
+    // Use a reverse iterator (rbegin) to access the entry with the largest key
+    auto max_tfs_map_pair = tranformations_count_map_.rbegin();
+    YAML::Node yaml_root = create_yaml(max_tfs_map_pair->second);
 
     // Serialise the YAML node to a string
     YAML::Emitter out;
