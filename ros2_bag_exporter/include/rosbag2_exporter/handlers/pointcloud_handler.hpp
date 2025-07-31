@@ -8,6 +8,7 @@
 
 #include "rclcpp/logging.hpp"
 #include "rosbag2_exporter/handlers/base_handler.hpp"
+#include "rosbag2_exporter/point_types.hpp"
 
 #include "sensor_msgs/msg/point_cloud2.hpp"
 
@@ -74,9 +75,9 @@ public:
 
     // Create the point cloud, convert the ROS message, and save it
     if (has_intensity) {
-      pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
+      pcl::PointCloud<NebulaPoint>::Ptr cloud(new pcl::PointCloud<NebulaPoint>);
       pcl::fromROSMsg(pc2_msg, *cloud);
-      return save_pointcloud_to_file<pcl::PointXYZI>(cloud, data_meta.data_path);
+      return save_pointcloud_to_file<NebulaPoint>(cloud, data_meta.data_path);
     } else {
       throw std::invalid_argument("The pointcloud message should have an 'intensity' field!");
     }
