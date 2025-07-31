@@ -112,6 +112,7 @@ docker run -it --rm --net host --privileged \
     -v /dev:/dev \
     -v /tmp:/tmp \
     $CYCLONE_VOL \
+    -v $SCRIPT_DIR/ros2_bag_exporter/config:/opt/ros_ws/config \
     -v $ROSBAGS_DIR:/opt/ros_ws/rosbags \
     -v $EXPORT_DIR:/opt/ros_ws/exported_data \
     -v /etc/localtime:/etc/localtime:ro \
