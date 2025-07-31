@@ -10,18 +10,21 @@ BASH_CMD=()
 CYCLONE_DIR=/home/$USER/cyclone_dds.xml
 # Default in-vehicle rosbags directory
 ROSBAGS_DIR=/recorded_datasets/edinburgh
-CHECK_PATH=true
+# Default export directory
+EXPORT_DIR=/mnt/vdb/exported_data
 
 # Function to print usage
 usage() {
     echo "
-Usage: runtime.sh [-b|bash] [-l|--local] [--path | -p ] [--help | -h] <cmd>
+Usage: runtime.sh [-b|bash] [-l|--local] [--path | -p ] [--output | -o ] [--help | -h] <cmd>
 
 Options:
     -l | --local    Use default local cyclone_dds.xml config
                     Optionally point to absolute -l /path/to/cyclone_dds.xml
-    -p | --path   ROSBAGS_DIR_PATH
+    -p | --path     ROSBAGS_DIR_PATH
                     Specify path to store recorded rosbags
+    -o | --output   EXPORT_DIR
+                    Specify path where exported data is stored
     -h | --help     Display this help message and exit.
 
 An interactive bash session will start if no <cmd> is provided.
@@ -42,6 +45,15 @@ while [[ "$#" -gt 0 ]]; do
         -p|--path)
             if [[ -n "$2" && "$2" != -* ]]; then
                 ROSBAGS_DIR="$2"
+                shift
+            else
+                echo "Error: Argument for $1 is missing."
+                usage
+            fi
+            ;;
+        -o|--output)
+            if [[ -n "$2" && "$2" != -* ]]; then
+                EXPORT_DIR="$2"
                 shift
             else
                 echo "Error: Argument for $1 is missing."
@@ -72,8 +84,14 @@ if [ -n "$CYCLONE_VOL" ]; then
 fi
 
 # Verify ROSBAGS_DIR exists
-if [ ! -d "$ROSBAGS_DIR" -a "$CHECK_PATH" = true ]; then
+if [ ! -d "$ROSBAGS_DIR" ]; then
     echo "$ROSBAGS_DIR does not exist! Please provide a valid path to store rosbags"
+    exit 1
+fi
+
+# Verify EXPORT_DIR exists
+if [ ! -d "$EXPORT_DIR" ]; then
+    echo "$EXPORT_DIR does not exist! Please provide a valid path where exported data is stored"
     exit 1
 fi
 
@@ -87,7 +105,6 @@ docker build \
 
 # Get the absolute path of the script
 SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
-mkdir -p $SCRIPT_DIR/output
 
 # Run docker image
 docker run -it --rm --net host --privileged \
@@ -96,6 +113,6 @@ docker run -it --rm --net host --privileged \
     -v /tmp:/tmp \
     $CYCLONE_VOL \
     -v $ROSBAGS_DIR:/opt/ros_ws/rosbags \
-    -v $SCRIPT_DIR/output:/opt/ros_ws/output \
+    -v $EXPORT_DIR:/opt/ros_ws/exported_data \
     -v /etc/localtime:/etc/localtime:ro \
     tartan_rosbag_expoter:latest "${BASH_CMD[@]}"
