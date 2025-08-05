@@ -8,6 +8,7 @@
 
 #include "rclcpp/logging.hpp"
 #include "rosbag2_exporter/handlers/base_handler.hpp"
+#include "rosbag2_exporter/point_types.hpp"
 
 #include "sensor_msgs/msg/point_cloud2.hpp"
 
@@ -74,9 +75,21 @@ public:
 
     // Create the point cloud, convert the ROS message, and save it
     if (has_intensity) {
-      pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
-      pcl::fromROSMsg(pc2_msg, *cloud);
-      return save_pointcloud_to_file<pcl::PointXYZI>(cloud, data_meta.data_path);
+      pcl::PointCloud<NebulaPoint>::Ptr cloud_nebula(new pcl::PointCloud<NebulaPoint>);
+      pcl::fromROSMsg(pc2_msg, *cloud_nebula);
+
+      // Convert NebulaPoint to pcl::PointXYZI for better compatibility with PCD format
+      pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_xyzi(new pcl::PointCloud<pcl::PointXYZI>);
+      cloud_xyzi->header = cloud_nebula->header;
+      cloud_xyzi->width = cloud_nebula->width;
+      cloud_xyzi->height = cloud_nebula->height;
+      cloud_xyzi->is_dense = cloud_nebula->is_dense;
+      cloud_xyzi->points.resize(cloud_nebula->points.size());
+      for (size_t i = 0; i < cloud_nebula->points.size(); ++i) {
+        cloud_xyzi->points[i] = convert_nebula_to_xyzi(cloud_nebula->points[i]);
+      }
+
+      return save_pointcloud_to_file<pcl::PointXYZI>(cloud_xyzi, data_meta.data_path);
     } else {
       throw std::invalid_argument("The pointcloud message should have an 'intensity' field!");
     }
@@ -86,6 +99,16 @@ private:
   std::string topic_dir_;
 
   std::vector<sensor_msgs::msg::PointCloud2> data_vec_;
+
+  pcl::PointXYZI convert_nebula_to_xyzi(const NebulaPoint & nebula_point)
+  {
+    pcl::PointXYZI point;
+    point.x = nebula_point.x;
+    point.y = nebula_point.y;
+    point.z = nebula_point.z;
+    point.intensity = static_cast<float>(nebula_point.intensity);
+    return point;
+  }
 
   // Templated function to save a point cloud to file
   template <typename PointT>
