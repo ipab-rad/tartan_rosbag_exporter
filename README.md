@@ -50,12 +50,6 @@ If you plan to modify this package, use `dev.sh` instead to run docker container
 
 ```bash
 ./dev.sh -p <rosbags_directory> -o <exported_data_directory>
-
-# rosbag_expoter@<your_machine>:/opt/ros_ws$ colcon_build
-# Starting >>> ros2_bag_exporter
-# Finished <<< ros2_bag_exporter [15.7s]
-#
-# Summary: 1 package finished [16.4s]
 ```
 
 
