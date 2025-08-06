@@ -49,10 +49,36 @@ void BagExporter::load_configuration()
       tc.type = MessageType::PointCloud2;
     } else if (type == "Image") {
       tc.type = MessageType::Image;
-      tc.encoding = topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8";
+
+      if (topic["encoding"]) {
+        tc.encoding = topic["encoding"].as<std::string>();
+      } else {
+        // Default encoding if not specified
+        tc.encoding = "rgb8";
+      }
+
+      if (topic["timestamp_offset_ms"]) {
+        tc.timestamp_offset_ms = topic["timestamp_offset_ms"].as<uint16_t>();
+      } else {
+        // Default offset if not specified
+        tc.timestamp_offset_ms = 0;
+      }
     } else if (type == "CompressedImage") {
       tc.type = MessageType::CompressedImage;
-      tc.encoding = topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8";
+
+      if (topic["encoding"]) {
+        tc.encoding = topic["encoding"].as<std::string>();
+      } else {
+        // Default encoding if not specified
+        tc.encoding = "rgb8";
+      }
+
+      if (topic["timestamp_offset_ms"]) {
+        tc.timestamp_offset_ms = topic["timestamp_offset_ms"].as<uint16_t>();
+      } else {
+        // Default offset if not specified
+        tc.timestamp_offset_ms = 0;
+      }
     } else if (type == "CameraInfo") {
       tc.type = MessageType::CameraInfo;
     } else if (type == "IMU") {
@@ -304,8 +330,9 @@ void BagExporter::export_data(const fs::path & used_rosbag, const fs::path & out
       // Get current camera metadata
       auto & curr_cam_handler = handlers_[topics_[k].name].handler;
       auto & current_meta_data_vec = curr_cam_handler->data_meta_vec_;
-      size_t closest_time_index =
-        utils::find_closest_timestamp(current_meta_data_vec, curr_lidar_time, msg_index[k]);
+      auto & camera_timestamp_offset_ms = topics_[k].timestamp_offset_ms;
+      size_t closest_time_index = utils::find_closest_timestamp(
+        current_meta_data_vec, camera_timestamp_offset_ms, curr_lidar_time, msg_index[k]);
 
       // Create YAML metadata based on the found time index
       auto current_cam_meta = current_meta_data_vec[closest_time_index];

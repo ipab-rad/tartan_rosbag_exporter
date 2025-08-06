@@ -45,12 +45,14 @@ int64_t toNanoseconds(const builtin_interfaces::msg::Time & timestamp)
   return static_cast<int64_t>(timestamp.sec) * std::pow(10, 9) + timestamp.nanosec;
 }
 
-// Function to find the closest index in a sorted vector for a given timestamp
+// Find the index of the closest data timestamp to a target timestamp
 size_t find_closest_timestamp(
-  const std::vector<DataMeta> & target_vector, const builtin_interfaces::msg::Time & timestamp,
-  size_t & last_index)
+  const std::vector<DataMeta> & target_vector, uint16_t timestamp_offset_ms,
+  const builtin_interfaces::msg::Time & target_timestamp, size_t & last_index)
 {
-  int64_t timestamp_ns = toNanoseconds(timestamp);
+  // Apply the timestamp offset to the target timestamp
+  int64_t timestamp_offset_ns = static_cast<int64_t>(timestamp_offset_ms) * 1'000'000;
+  int64_t target_timestamp_ns = toNanoseconds(target_timestamp) + timestamp_offset_ns;
 
   // Start from the last known index
   size_t closest_index = last_index;
@@ -59,7 +61,7 @@ size_t find_closest_timestamp(
   // Iterate forward through the sorted vector
   for (size_t i = last_index; i < target_vector.size(); ++i) {
     int64_t target_ns = toNanoseconds(target_vector[i].timestamp);
-    int64_t diff = std::abs(target_ns - timestamp_ns);
+    int64_t diff = std::abs(target_ns - target_timestamp_ns);
 
     // Update closest index and minimum difference
     if (diff < min_diff) {
