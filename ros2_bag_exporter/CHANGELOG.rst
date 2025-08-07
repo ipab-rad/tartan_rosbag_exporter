@@ -2,6 +2,34 @@
 Changelog for package ros2_bag_exporter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix camera-lidar timestamp synchronisation (`#25 <https://github.com/ipab-rad/tartan_rosbag_exporter/issues/25>`_)
+  - Add `timestamp_offset_ms` parameter for every camera to adjust
+  lidar timestamps to correlate correctly with camera data.
+  - Update `find_closest_timestamp` function to receive this parameter
+  and apply the time offset required for each camera.
+* Add support for Nebula HESAI LIDAR points (`#23 <https://github.com/ipab-rad/tartan_rosbag_exporter/issues/23>`_)
+  - Define `PointXYZIRCAEDT` point data structure and register it
+  with the PCL point cloud library in a new header file.
+  - Use `NebulaPoint` as an alias for `PointXYZIRCAEDT`
+  - Cast `NebulaPoint` to pcl::PointXYZI before saving
+  - Iterate through the points in the original NebulaPoint cloud
+  and assign the values to a new point cloud with `pcl::PointXYZI`
+  structure.
+  - Update `pointcloud_handler.hpp` to use `NebulaPoint` when
+  handling point clouds.
+  - Allow the user to define a directory for exported data
+  - Modify `dev.sh` and `runtime.sh` to include `-o | --output` option to
+  specify the export directory.
+  - Mount config files when running the runtime Docker
+  - Modify `runtime.sh` to mount `ros2_bag_exporter/config` in
+  `/opt/ros_ws/config`
+  - Update README
+  - Provide instructions for running the Docker container and the
+  `ros2_bag_exporter bag_exporter` ROS node
+* Contributors: Hector Cruz
+
 1.1.0 (2025-07-01)
 ------------------
 * Export the tf message with the most transforms. (`#19 <https://github.com/ipab-rad/tartan_rosbag_exporter/issues/19>`_)
