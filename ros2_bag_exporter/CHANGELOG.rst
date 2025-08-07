@@ -2,8 +2,8 @@
 Changelog for package ros2_bag_exporter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.0.0 (2025-08-07)
+------------------
 * Fix camera-lidar timestamp synchronisation (`#25 <https://github.com/ipab-rad/tartan_rosbag_exporter/issues/25>`_)
   - Add `timestamp_offset_ms` parameter for every camera to adjust
   lidar timestamps to correlate correctly with camera data.
