@@ -42,6 +42,7 @@ struct TopicConfig
   std::string encoding;
   int sample_interval;
   std::string topic_dir;
+  uint16_t timestamp_offset_ms;
 };
 
 struct Handler

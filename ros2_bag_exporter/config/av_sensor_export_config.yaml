@@ -14,6 +14,7 @@ topics:
   - name: "/sensor/camera/fsp_l/image_rect_color/compressed"
     type: "CompressedImage"
     sample_interval: 1
+    timestamp_offset_ms: 70
     topic_dir: "camera/fsp_l"
 
   - name: "/sensor/camera/fsp_l/camera_info"
@@ -24,6 +25,7 @@ topics:
   - name: "/sensor/camera/fsp_r/image_rect_color/compressed"
     type: "CompressedImage"
     sample_interval: 1
+    timestamp_offset_ms: 70
     topic_dir: "camera/fsp_r"
 
   - name: "/sensor/camera/fsp_r/camera_info"
@@ -34,6 +36,7 @@ topics:
   - name: "/sensor/camera/rsp_l/image_rect_color/compressed"
     type: "CompressedImage"
     sample_interval: 1
+    timestamp_offset_ms: 20
     topic_dir: "camera/rsp_l"
 
   - name: "/sensor/camera/rsp_l/camera_info"
@@ -44,6 +47,7 @@ topics:
   - name: "/sensor/camera/rsp_r/image_rect_color/compressed"
     type: "CompressedImage"
     sample_interval: 1
+    timestamp_offset_ms: 20
     topic_dir: "camera/rsp_r"
 
   - name: "/sensor/camera/rsp_r/camera_info"
@@ -54,6 +58,7 @@ topics:
   - name: "/sensor/camera/lspf_r/image_rect_color/compressed"
     type: "CompressedImage"
     sample_interval: 1
+    timestamp_offset_ms: 51
     topic_dir: "camera/lspf_r"
 
   - name: "/sensor/camera/lspf_r/camera_info"
@@ -64,6 +69,7 @@ topics:
   - name: "/sensor/camera/lspr_l/image_rect_color/compressed"
     type: "CompressedImage"
     sample_interval: 1
+    timestamp_offset_ms: 38
     topic_dir: "camera/lspr_l"
 
   - name: "/sensor/camera/lspr_l/camera_info"
@@ -74,6 +80,7 @@ topics:
   - name: "/sensor/camera/rspf_l/image_rect_color/compressed"
     type: "CompressedImage"
     sample_interval: 1
+    timestamp_offset_ms: 88
     topic_dir: "camera/rspf_l"
 
   - name: "/sensor/camera/rspf_l/camera_info"
@@ -84,6 +91,7 @@ topics:
   - name: "/sensor/camera/rspr_r/image_rect_color/compressed"
     type: "CompressedImage"
     sample_interval: 1
+    timestamp_offset_ms: 101
     topic_dir: "camera/rspr_r"
 
   - name: "/sensor/camera/rspr_r/camera_info"
